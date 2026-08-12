@@ -212,34 +212,6 @@
     <xacro:caster name="caster_front_link" x_offset="${caster_x_front}"/>
     <xacro:caster name="caster_rear_link"  x_offset="${caster_x_rear}"/>
 
-    <!-- ros2_control interface -->
-    <ros2_control name="frontierx_scout_control" type="system">
-      <hardware>
-        <!-- Simulation: use Isaac Sim plugin or Gazebo -->
-        <plugin>frontierx_control/ScoutHardwareInterface</plugin>
-        <param name="wheel_separation">${wheel_sep}</param>
-        <param name="wheel_radius">${wheel_radius}</param>
-      </hardware>
-
-      <joint name="wheel_left_link_joint">
-        <command_interface name="velocity">
-          <param name="min">-6.0</param>
-          <param name="max">6.0</param>
-        </command_interface>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-
-      <joint name="wheel_right_link_joint">
-        <command_interface name="velocity">
-          <param name="min">-6.0</param>
-          <param name="max">6.0</param>
-        </command_interface>
-        <state_interface name="position"/>
-        <state_interface name="velocity"/>
-      </joint>
-    </ros2_control>
-
   </xacro:macro>
 
 </robot>

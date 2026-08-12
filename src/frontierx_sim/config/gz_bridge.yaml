@@ -37,6 +37,13 @@
   gz_type_name: gz.msgs.Odometry
   direction: GZ_TO_ROS
 
+# Joint states from Gazebo to ROS (needed for robot_state_publisher)
+- ros_topic_name: /joint_states
+  gz_topic_name: /world/frontierx_warehouse/model/frontierx_scout/joint_state
+  ros_type_name: sensor_msgs/msg/JointState
+  gz_type_name: gz.msgs.Model
+  direction: GZ_TO_ROS
+
 # Wheel joint control (velocity commands)
 - ros_topic_name: /left_wheel_velocity_cmd
   gz_topic_name: /world/frontierx_warehouse/model/frontierx_scout/joint/wheel_left_link_joint/cmd_vel
