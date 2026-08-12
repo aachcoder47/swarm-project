@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>frontierx_bringup</name>
+  <version>0.1.0</version>
+  <description>Master bringup and launch configurations for FrontierX Scout</description>
+  <maintainer email="robotics@frontierxlabs.com">FrontierX Labs</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>frontierx_robot_description</exec_depend>
+  <exec_depend>frontierx_navigation</exec_depend>
+  <exec_depend>frontierx_perception</exec_depend>
+  <exec_depend>frontierx_diagnostics</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

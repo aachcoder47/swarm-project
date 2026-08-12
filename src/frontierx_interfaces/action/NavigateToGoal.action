@@ -1,0 +1,72 @@
+# NavigateToGoal.action
+# Navigate the robot to a target pose in the map frame.
+
+# ── Goal ──────────────────────────────────────────────────────
+geometry_msgs/PoseStamped target_pose
+
+# Maximum time allowed for navigation (seconds, 0 = no limit)
+float32 timeout_seconds
+
+# Acceptable distance to goal (meters)
+float32 goal_tolerance_xy
+
+# Acceptable heading error (radians)
+float32 goal_tolerance_theta
+
+# Whether to allow replanning if path is blocked
+bool allow_replanning
+
+# Behavior on obstacle blocking: WAIT, REPLAN, FAIL
+uint8 WAIT   = 0
+uint8 REPLAN = 1
+uint8 FAIL   = 2
+uint8 obstacle_behavior
+
+---
+
+# ── Result ────────────────────────────────────────────────────
+bool success
+
+uint8 SUCCEEDED          = 0
+uint8 FAILED_TIMEOUT     = 1
+uint8 FAILED_OBSTACLE    = 2
+uint8 FAILED_PLANNING    = 3
+uint8 FAILED_PREEMPTED   = 4
+uint8 result_code
+
+string message
+
+# Final pose achieved
+geometry_msgs/PoseStamped final_pose
+
+# Distance from goal at termination (meters)
+float32 distance_to_goal
+
+# Total path length traveled (meters)
+float32 path_length_meters
+
+# Time taken (seconds)
+float32 elapsed_seconds
+
+# Number of replanning attempts
+uint32 replan_count
+
+---
+
+# ── Feedback ──────────────────────────────────────────────────
+geometry_msgs/PoseStamped current_pose
+
+# Distance remaining to goal (meters)
+float32 distance_remaining
+
+# Estimated time remaining (seconds)
+float32 estimated_time_remaining
+
+# Navigation state
+uint8 NAV_PLANNING   = 0
+uint8 NAV_MOVING     = 1
+uint8 NAV_RECOVERING = 2
+uint8 nav_state
+
+# Current speed (m/s)
+float32 current_speed

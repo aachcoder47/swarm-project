@@ -1,0 +1,46 @@
+# FollowPerson.action
+# Follow a specific tracked person, maintaining a safe following distance.
+
+# ── Goal ──────────────────────────────────────────────────────
+
+# Track ID of the person to follow (-1 = follow nearest person)
+int32 person_track_id
+
+# Desired following distance (meters)
+float32 follow_distance
+
+# Maximum following speed (m/s)
+float32 max_speed
+
+# Maximum time to follow (seconds, 0 = indefinite)
+float32 timeout_seconds
+
+# Whether to stop if person is lost
+bool stop_on_lost
+
+# Seconds to wait for re-identification before stopping
+float32 reacquire_timeout
+
+---
+
+# ── Result ────────────────────────────────────────────────────
+bool success
+
+uint8 COMPLETED_TIMEOUT    = 0
+uint8 PERSON_LOST          = 1
+uint8 PREEMPTED            = 2
+uint8 OBSTACLE_BLOCKED     = 3
+uint8 result_code
+
+string message
+float32 total_distance_followed
+float32 elapsed_seconds
+
+---
+
+# ── Feedback ──────────────────────────────────────────────────
+int32 current_track_id
+geometry_msgs/PoseStamped person_pose
+float32 current_distance
+bool person_visible
+float32 elapsed_seconds

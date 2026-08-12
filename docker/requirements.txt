@@ -1,0 +1,47 @@
+# FrontierX Robotics — Python Dependencies
+# ==========================================
+# Installed inside the ROS 2 Docker image.
+
+# ── Computer Vision ──────────────────────────────────────────
+ultralytics>=8.0.0          # YOLOv8
+opencv-python-headless>=4.8
+Pillow>=10.0
+
+# ── Deep Learning ────────────────────────────────────────────
+torch>=2.1.0
+torchvision>=0.16.0
+# tensorrt — installed separately from NVIDIA (version-dependent)
+
+# ── AI Agent ─────────────────────────────────────────────────
+ollama>=0.1.8               # ollama Python client
+pydantic>=2.0               # Data validation for task plans
+jsonschema>=4.19            # JSON schema validation
+
+# ── Data / Science ───────────────────────────────────────────
+numpy>=1.24
+scipy>=1.11
+matplotlib>=3.7
+pandas>=2.0
+
+# ── Robotics Utilities ───────────────────────────────────────
+transforms3d>=0.4           # 3D coordinate transforms
+pyserial>=3.5               # Serial communication (real robot)
+
+# ── Perception / Tracking ────────────────────────────────────
+# ByteTrack is included via ultralytics
+# lap>=0.4                  # Linear assignment (ByteTrack dependency)
+
+# ── Database (world model persistence) ───────────────────────
+# sqlite3 is part of Python stdlib
+
+# ── Utilities ────────────────────────────────────────────────
+pyyaml>=6.0
+click>=8.1                  # CLI tools
+rich>=13.0                  # Terminal formatting
+loguru>=0.7                 # Structured logging
+psutil>=5.9                 # System resource monitoring
+
+# ── Testing ──────────────────────────────────────────────────
+pytest>=7.4
+pytest-asyncio>=0.21
+pytest-cov>=4.1

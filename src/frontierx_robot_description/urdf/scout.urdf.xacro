@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+  FrontierX Scout — Master URDF/Xacro
+  =====================================
+  This is the top-level Xacro file that assembles the complete
+  FrontierX Scout robot description from sub-components.
+
+  Robot: FrontierX Scout
+  Drive: Differential, 2-wheel + 2 casters
+  Sensors: 2D LiDAR, RGB Camera, Depth Camera, IMU, Wheel Encoders
+
+  TF Tree:
+    map → odom → base_footprint → base_link
+                                   ├── wheel_left_link
+                                   ├── wheel_right_link
+                                   ├── caster_front_link
+                                   ├── caster_rear_link
+                                   ├── laser_frame
+                                   ├── camera_link
+                                   │     └── camera_depth_frame
+                                   │           └── camera_depth_optical_frame
+                                   └── imu_link
+-->
+<robot name="frontierx_scout" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ── Parameters ────────────────────────────────────────── -->
+  <xacro:include filename="$(find frontierx_robot_description)/urdf/scout_base.xacro"/>
+  <xacro:include filename="$(find frontierx_robot_description)/urdf/scout_sensors.xacro"/>
+  <xacro:include filename="$(find frontierx_robot_description)/urdf/scout_gazebo.xacro"/>
+
+  <!-- ── Instantiate robot ─────────────────────────────────── -->
+  <xacro:frontierx_scout_base/>
+  <xacro:frontierx_scout_sensors/>
+  <xacro:frontierx_scout_gazebo/>
+
+</robot>

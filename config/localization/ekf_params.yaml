@@ -1,0 +1,108 @@
+# FrontierX Scout — EKF Localization Parameters
+# ================================================
+# Extended Kalman Filter configuration using robot_localization.
+# Fuses wheel odometry (/odom) and IMU (/imu/data) to produce
+# a filtered odometry estimate on /odometry/filtered.
+#
+# See: http://docs.ros.org/en/noetic/api/robot_localization/html/
+# Documentation: docs/06-localization.md
+
+ekf_filter_node_odom:
+  ros__parameters:
+
+    use_sim_time: true
+    frequency: 50.0       # Filter output frequency (Hz)
+    sensor_timeout: 0.1   # Seconds before sensor considered stale
+    two_d_mode: true      # True for planar robots (ignores Z, roll, pitch)
+    transform_time_offset: 0.0
+    transform_timeout: 0.0
+    print_diagnostics: true
+    debug: false
+
+    # Published frames
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom        # Use odom frame for continuous filtered output
+
+    # ── Odometry source ─────────────────────────────────────────
+    # Topic: /odom
+    # Covariance: provided by the diff-drive controller
+    odom0: /odom
+    odom0_config: [
+      # x       y       z
+      true,   true,   false,
+      # roll    pitch   yaw
+      false,  false,  true,
+      # vx      vy      vz
+      true,   false,  false,
+      # vroll   vpitch  vyaw
+      false,  false,  true,
+      # ax      ay      az
+      false,  false,  false
+    ]
+    odom0_queue_size: 10
+    odom0_nodelay: false
+    odom0_differential: false
+    odom0_relative: false
+
+    # ── IMU source ───────────────────────────────────────────────
+    # Topic: /imu/data
+    # Provides: angular velocity (yaw rate) and linear acceleration
+    imu0: /imu/data
+    imu0_config: [
+      # x       y       z
+      false,  false,  false,
+      # roll    pitch   yaw
+      false,  false,  true,
+      # vx      vy      vz
+      false,  false,  false,
+      # vroll   vpitch  vyaw
+      false,  false,  true,
+      # ax      ay      az
+      true,   false,  false
+    ]
+    imu0_nodelay: false
+    imu0_differential: false
+    imu0_relative: true
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+
+    # ── Process Noise Covariance ─────────────────────────────────
+    # Q matrix diagonal: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    process_noise_covariance: [
+      0.05,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.05,   0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.06,   0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.03,   0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.03,   0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.06,   0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.04,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.02,   0.0,    0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,    0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,
+      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.015
+    ]
+
+    # Initial estimate covariance (uncertainty at startup)
+    initial_estimate_covariance: [
+      1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.5,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.5,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.5,  0.0,   0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.001, 0.0,   0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.001, 0.0,   0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.001, 0.0,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.5,   0.0,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.5,   0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0,   0.0,   0.5
+    ]

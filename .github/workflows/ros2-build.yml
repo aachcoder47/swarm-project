@@ -1,0 +1,204 @@
+name: ROS 2 Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  ROS_DISTRO: humble
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  # ── Lint ────────────────────────────────────────────────────
+  lint:
+    name: Lint & Style Check
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lint tools
+        run: |
+          pip3 install flake8 black isort
+          apt-get update -q && apt-get install -y \
+            ros-humble-ament-flake8 \
+            ros-humble-ament-pep8 \
+            clang-format
+
+      - name: Python style (black)
+        run: black --check --diff src/
+
+      - name: Python imports (isort)
+        run: isort --check-only src/
+
+      - name: Python lint (flake8)
+        run: flake8 src/ --max-line-length=100 --exclude=__pycache__
+
+  # ── Build ────────────────────────────────────────────────────
+  build:
+    name: Build ROS 2 Workspace
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop-full
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y \
+            ros-humble-navigation2 \
+            ros-humble-nav2-bringup \
+            ros-humble-slam-toolbox \
+            ros-humble-robot-localization \
+            ros-humble-robot-state-publisher \
+            ros-humble-xacro \
+            ros-humble-ros2-control \
+            ros-humble-diff-drive-controller \
+            ros-humble-twist-mux \
+            ros-humble-foxglove-bridge \
+            ros-humble-diagnostic-updater \
+            python3-pip
+          pip3 install --no-cache-dir \
+            pydantic jsonschema numpy pyyaml
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build \
+            --symlink-install \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release \
+            --event-handlers console_cohesion+
+        shell: bash
+
+      - name: Check for build warnings
+        run: |
+          if grep -r "CMake Warning" log/; then
+            echo "::warning::CMake warnings found"
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log
+          path: log/
+
+  # ── Interface Validation ──────────────────────────────────────
+  validate-interfaces:
+    name: Validate ROS 2 Interfaces
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop-full
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install + build interfaces
+        run: |
+          apt-get update -q
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select frontierx_interfaces
+          source install/setup.bash
+          # Verify all interfaces can be introspected
+          ros2 interface show frontierx_interfaces/msg/Detection
+          ros2 interface show frontierx_interfaces/msg/WorldObject
+          ros2 interface show frontierx_interfaces/action/NavigateToGoal
+          ros2 interface show frontierx_interfaces/srv/QueryWorldModel
+          echo "All interfaces validated successfully."
+        shell: bash
+
+  # ── URDF Validation ───────────────────────────────────────────
+  validate-urdf:
+    name: Validate Robot URDF
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop-full
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install URDF tools
+        run: |
+          apt-get update -q
+          apt-get install -y \
+            ros-humble-urdf \
+            ros-humble-xacro \
+            liburdfdom-tools
+
+      - name: Process and validate URDF
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select frontierx_robot_description
+          source install/setup.bash
+          # Process Xacro to URDF
+          xacro src/frontierx_robot_description/urdf/scout.urdf.xacro \
+            > /tmp/scout.urdf
+          # Validate URDF structure
+          check_urdf /tmp/scout.urdf
+          echo "URDF validation passed."
+        shell: bash
+
+  # ── Unit Tests ────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop-full
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y \
+            ros-humble-navigation2 \
+            ros-humble-slam-toolbox \
+            ros-humble-robot-localization \
+            python3-pip
+          pip3 install pytest pytest-cov pydantic jsonschema numpy
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --symlink-install
+        shell: bash
+
+      - name: Run tests
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test --event-handlers console_cohesion+
+          colcon test-result --verbose
+        shell: bash
+
+      - name: Publish test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            log/
+            **/*.xml
+
+  # ── Summary ────────────────────────────────────────────────────
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-22.04
+    needs: [lint, build, validate-interfaces, validate-urdf, test]
+    if: always()
+    steps:
+      - name: Report status
+        run: |
+          echo "## FrontierX CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Interfaces | ${{ needs.validate-interfaces.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URDF | ${{ needs.validate-urdf.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY

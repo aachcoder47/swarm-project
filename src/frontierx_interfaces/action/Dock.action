@@ -1,0 +1,40 @@
+# Dock.action
+# Navigate to the charging station and initiate docking sequence.
+
+# ── Goal ──────────────────────────────────────────────────────
+
+# World model ID of the docking station
+string dock_station_id
+
+# Maximum approach distance to begin fine docking (meters)
+float32 approach_distance
+
+float32 timeout_seconds
+
+---
+
+# ── Result ────────────────────────────────────────────────────
+bool success
+bool charging_confirmed
+
+uint8 DOCKED_SUCCESS      = 0
+uint8 DOCK_NOT_FOUND      = 1
+uint8 APPROACH_FAILED     = 2
+uint8 ALIGNMENT_FAILED    = 3
+uint8 TIMEOUT             = 4
+uint8 result_code
+
+string message
+float32 elapsed_seconds
+
+---
+
+# ── Feedback ──────────────────────────────────────────────────
+uint8 APPROACHING    = 0
+uint8 ALIGNING       = 1
+uint8 DOCKING        = 2
+uint8 VERIFYING      = 3
+uint8 dock_phase
+
+float32 distance_to_dock
+float32 alignment_error_deg

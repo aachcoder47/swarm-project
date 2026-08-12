@@ -1,0 +1,53 @@
+# ExecuteTaskPlan.action
+# Execute a multi-step structured task plan produced by the AI agent.
+
+# ── Goal ──────────────────────────────────────────────────────
+
+# JSON-encoded task plan from the agent
+# Schema: {"task_id": str, "steps": [{"type": str, "params": dict}]}
+string task_plan_json
+
+# Natural language description of the task (for logging)
+string natural_language_description
+
+# Whether agent output has been validated
+bool pre_validated
+
+# Maximum time to execute the whole plan (seconds)
+float32 total_timeout_seconds
+
+---
+
+# ── Result ────────────────────────────────────────────────────
+bool success
+
+uint8 ALL_STEPS_COMPLETED   = 0
+uint8 STEP_FAILED           = 1
+uint8 VALIDATION_FAILED     = 2
+uint8 TIMEOUT               = 3
+uint8 SAFETY_BLOCKED        = 4
+uint8 PREEMPTED             = 5
+uint8 result_code
+
+string message
+
+# Which step failed (if applicable)
+uint32 failed_step_index
+string failed_step_reason
+
+# Steps completed
+uint32 steps_completed
+uint32 steps_total
+
+float32 elapsed_seconds
+
+---
+
+# ── Feedback ──────────────────────────────────────────────────
+uint32 current_step_index
+uint32 total_steps
+string current_step_type
+string current_step_description
+float32 step_progress
+float32 overall_progress
+string status_message

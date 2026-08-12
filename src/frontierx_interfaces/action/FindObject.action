@@ -1,0 +1,70 @@
+# FindObject.action
+# Search for an object by class name or label, navigate to it.
+
+# ── Goal ──────────────────────────────────────────────────────
+
+# Object class to search for (e.g. "chair", "person", "red_box")
+string object_class
+
+# Optional: specific object label from world model
+string object_label
+
+# Search strategy
+uint8 WORLD_MODEL_FIRST = 0  # Check world model, then explore
+uint8 EXPLORE_FIRST     = 1  # Always explore (ignore world model)
+uint8 WORLD_MODEL_ONLY  = 2  # Fail if not in world model
+uint8 search_strategy
+
+# Maximum search time (seconds)
+float32 timeout_seconds
+
+# How close to get to the object (meters)
+float32 approach_distance
+
+# Whether to verify visually on arrival
+bool verify_on_arrival
+
+---
+
+# ── Result ────────────────────────────────────────────────────
+bool success
+bool object_found
+
+uint8 FOUND_AND_REACHED        = 0
+uint8 FOUND_NAV_FAILED         = 1
+uint8 NOT_FOUND_TIMEOUT        = 2
+uint8 NOT_FOUND_NO_CANDIDATES  = 3
+uint8 VERIFICATION_FAILED      = 4
+uint8 result_code
+
+string message
+
+# The world object that was found
+frontierx_interfaces/WorldObject found_object
+
+# Whether visual verification succeeded
+bool verified
+
+# Time taken (seconds)
+float32 elapsed_seconds
+
+---
+
+# ── Feedback ──────────────────────────────────────────────────
+# Current search phase
+uint8 SEARCHING_WORLD_MODEL = 0
+uint8 EXPLORING             = 1
+uint8 NAVIGATING_TO_OBJECT  = 2
+uint8 VERIFYING             = 3
+uint8 search_phase
+
+string status_message
+
+# Robot's current pose
+geometry_msgs/PoseStamped current_pose
+
+# Candidate objects found so far
+frontierx_interfaces/WorldObject[] candidates
+
+# Fraction of estimated search area covered [0.0, 1.0]
+float32 coverage_fraction

@@ -1,0 +1,30 @@
+# QueryWorldModel.srv
+# Query the world model for information about known objects or locations.
+
+# Query string (natural language or structured)
+# Examples:
+#   "red_box"            → find by label
+#   "class:chair"        → find all chairs
+#   "all"                → return all objects
+#   "nearest:person"     → find nearest person to robot
+string query
+
+# Optional: filter to specific class
+string class_filter
+
+# Optional: max results to return (0 = unlimited)
+uint32 max_results
+
+---
+
+# Whether any matching objects were found
+bool found
+
+# Matching world objects
+frontierx_interfaces/WorldObject[] objects
+
+# Human-readable summary of results
+string summary
+
+# Query processing time (ms)
+float32 processing_time_ms

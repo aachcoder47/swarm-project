@@ -1,0 +1,108 @@
+# ============================================================
+# FrontierX Robotics — .gitignore
+# ============================================================
+
+# ── ROS 2 Build Artifacts ───────────────────────────────────
+build/
+install/
+log/
+*.egg-info/
+.colcon_install_layout
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+.env
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.coverage
+coverage.xml
+
+# ── C++ ─────────────────────────────────────────────────────
+*.o
+*.a
+*.so
+*.out
+*.gch
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# ── Isaac Sim / Omniverse ────────────────────────────────────
+.nvidia-omniverse/
+*.usd.bak
+*.usda.bak
+omni.log
+_output/
+omniverse-logs/
+kit/
+_build/
+
+# ── Docker ───────────────────────────────────────────────────
+docker/.env
+docker/volumes/
+
+# ── IDE / Editor ─────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.rosww
+
+# ── ROS Bags ─────────────────────────────────────────────────
+*.db3
+*.mcap
+bags/
+rosbag/
+
+# ── ML / Models ──────────────────────────────────────────────
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+models/weights/
+!models/.gitkeep
+
+# ── Maps ─────────────────────────────────────────────────────
+maps/*.pgm
+maps/*.yaml
+!maps/.gitkeep
+
+# ── Logs & Benchmarks ────────────────────────────────────────
+logs/
+benchmarks/results/
+!benchmarks/.gitkeep
+
+# ── Secrets ──────────────────────────────────────────────────
+.env
+*.key
+*.pem
+secrets/
+
+# ── Node (dashboard) ─────────────────────────────────────────
+node_modules/

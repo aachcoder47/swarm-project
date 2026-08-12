@@ -1,0 +1,240 @@
+# FrontierX Robotics — Docker Compose Stack
+# ==========================================
+# Orchestrates the complete ROS 2 + Isaac Sim development environment.
+#
+# Services:
+#   ros2-build   : One-shot builder that compiles the ROS 2 workspace
+#   ros2-core    : Core ROS 2 Humble node (DDS, TF, robot_state_publisher)
+#   navigation   : Nav2 + SLAM Toolbox + EKF
+#   perception   : YOLOv8 + ByteTrack + world model
+#   agent        : AI Robot Agent (ollama + LLaMA 3.1)
+#   foxglove     : Foxglove Studio bridge
+#   dashboard    : Nginx project dashboard
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  ros2_net:
+    driver: bridge
+  agent_net:
+    driver: bridge
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  ros2_workspace:
+  maps_data:
+  world_model_data:
+  model_weights:
+  ollama_data:
+
+# ── Base ROS 2 service ────────────────────────────────────────
+x-ros2-base: &ros2-base
+  image: frontierx/ros2-humble:latest
+  pull_policy: build
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.ros2
+  environment:
+    - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+    - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+    - RCUTILS_LOGGING_BUFFERED_STREAM=1
+    - RCUTILS_COLORIZED_OUTPUT=1
+  volumes:
+    - ../src:/opt/ros_ws/src:ro
+    - ../config:/opt/frontierx/config:ro
+    - ros2_workspace:/opt/ros_ws/install
+  restart: unless-stopped
+
+# ── Reusable wait-for-build snippet ──────────────────────────
+# All runtime services use this prefix to block until the build
+# volume has a valid install/setup.bash before launching.
+x-wait-for-build: &wait-for-build >-
+  until [ -f /opt/ros_ws/install/setup.bash ]; do
+    echo "Waiting for build..."; sleep 3;
+  done &&
+
+services:
+  # ── ROS 2 Build (one-shot) ───────────────────────────────────
+  # Builds the entire workspace into the shared ros2_workspace volume.
+  # No --symlink-install: src is :ro so symlinks cannot be dereferenced.
+  ros2-build:
+    <<: *ros2-base
+    container_name: frontierx_ros2_build
+    restart: "no"
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        cd /opt/ros_ws &&
+        rm -rf build log &&
+        rm -rf install/* 2>/dev/null || true &&
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release &&
+        echo 'BUILD COMPLETE'
+      "
+
+  # ── Core DDS / TF / Robot State Publisher ────────────────────
+  ros2-core:
+    <<: *ros2-base
+    container_name: frontierx_ros2_core
+    ports:
+      - "8765:8765"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 launch frontierx_bringup core.launch.py
+      "
+
+  # ── Navigation Stack ─────────────────────────────────────────
+  navigation:
+    <<: *ros2-base
+    container_name: frontierx_navigation
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
+      - maps_data:/opt/frontierx/maps
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 launch frontierx_bringup navigation.launch.py || sleep infinity
+      "
+
+  # ── Perception Pipeline ──────────────────────────────────────
+  perception:
+    <<: *ros2-base
+    container_name: frontierx_perception
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
+      - model_weights:/opt/frontierx/models
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 launch frontierx_bringup perception.launch.py || sleep infinity
+      "
+
+  # ── World Model ──────────────────────────────────────────────
+  world-model:
+    <<: *ros2-base
+    container_name: frontierx_world_model
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
+      - world_model_data:/opt/frontierx/world_model
+      - maps_data:/opt/frontierx/maps:ro
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 run frontierx_tasks world_model_node.py || sleep infinity
+      "
+
+  # ── AI Robot Agent ───────────────────────────────────────────
+  agent:
+    <<: *ros2-base
+    container_name: frontierx_agent
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+      ollama:
+        condition: service_started
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - FRONTIERX_LLM_MODEL=${LLM_MODEL:-llama3.1:8b}
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 run frontierx_robot_agent agent_node.py || sleep infinity
+      "
+
+  # ── ollama LLM Server ────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: frontierx_ollama
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    command: serve
+    restart: unless-stopped
+
+  # ── Safety Monitor ───────────────────────────────────────────
+  safety-monitor:
+    <<: *ros2-base
+    container_name: frontierx_safety
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+    privileged: true
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 run frontierx_diagnostics safety_monitor_node.py || sleep infinity
+      "
+
+  # ── Foxglove Bridge ──────────────────────────────────────────
+  foxglove-bridge:
+    <<: *ros2-base
+    container_name: frontierx_foxglove
+    network_mode: "service:ros2-core"
+    depends_on:
+      ros2-build:
+        condition: service_completed_successfully
+      ros2-core:
+        condition: service_started
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        ros2 run foxglove_bridge foxglove_bridge --ros-args -p port:=8765 -p address:=0.0.0.0
+      "
+    restart: unless-stopped
+
+  # ── Diagnostics Dashboard ────────────────────────────────────
+  dashboard:
+    image: nginx:alpine
+    container_name: frontierx_dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ../dashboard:/usr/share/nginx/html:ro
+    restart: unless-stopped

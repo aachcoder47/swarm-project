@@ -1,0 +1,19 @@
+# ResetRobot.srv
+# Software reset of robot subsystems.
+
+# Bitmask of subsystems to reset
+bool reset_navigation
+bool reset_world_model
+bool reset_localization
+bool reset_perception
+bool reset_agent
+bool reset_all   # If true, resets all subsystems
+
+# Reason for reset (for logging)
+string reason
+
+---
+
+bool success
+string message
+string[] reset_subsystems

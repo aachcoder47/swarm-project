@@ -1,0 +1,184 @@
+{
+  "configById": {
+    "3D!scout": {
+      "layers": {
+        "urdf-robot": {
+          "visible": true,
+          "label": "Robot Model",
+          "layerConfig": {
+            "type": "foxglove.URDF",
+            "url": "",
+            "topic": "/robot_description",
+            "framePrefix": ""
+          }
+        },
+        "grid-ground": {
+          "visible": true,
+          "label": "Ground Grid",
+          "layerConfig": {
+            "type": "foxglove.Grid",
+            "color": "#248eff30",
+            "size": 20,
+            "divisions": 20
+          }
+        }
+      },
+      "cameraState": {
+        "distance": 8,
+        "perspective": true,
+        "phi": 55,
+        "targetOffset": [0, 0, 0],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000,
+        "target": [0, 0, 0]
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "enableStats": false,
+        "backgroundColor": "#111827",
+        "labelScaleFactor": 1,
+        "ignoreColladaUpAxis": false,
+        "meshUpAxis": "y-up",
+        "transforms": {
+          "axisScale": 1.5,
+          "editable": false,
+          "showLabel": false,
+          "labelSize": 0.2
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "topics": {
+        "/tf": {
+          "visible": true
+        },
+        "/tf_static": {
+          "visible": true
+        },
+        "/robot_description": {
+          "visible": true
+        },
+        "/joint_states": {
+          "visible": false
+        },
+        "/visualization_marker": {
+          "visible": true
+        },
+        "/visualization_marker_array": {
+          "visible": true
+        },
+        "/scan": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "pointSize": 3
+        },
+        "/map": {
+          "visible": true,
+          "colorField": "data",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "frameLocked": true
+        },
+        "/robot_health": {
+          "visible": false
+        }
+      }
+    },
+    "Plot!telemetry": {
+      "paths": [
+        { "value": "/robot_health.speed",    "enabled": true, "timestampMethod": "receiveTime", "label": "Speed" },
+        { "value": "/robot_health.pitch",    "enabled": true, "timestampMethod": "receiveTime", "label": "Pitch" },
+        { "value": "/robot_health.position", "enabled": true, "timestampMethod": "receiveTime", "label": "Position" },
+        { "value": "/robot_health.roll",     "enabled": true, "timestampMethod": "receiveTime", "label": "Roll" }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Telemetry"
+    },
+    "Gauge!speed": {
+      "path": "/robot_health.speed",
+      "minValue": 0,
+      "maxValue": 10,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": ["#f44336", "#4caf50"],
+      "reverse": false,
+      "foxglovePanelTitle": "Speed [0-10]"
+    },
+    "Gauge!pitch": {
+      "path": "/robot_health.pitch",
+      "minValue": -3.14159,
+      "maxValue": 3.14159,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": ["#f44336", "#4caf50"],
+      "reverse": false,
+      "foxglovePanelTitle": "Pitch [-pi,pi]"
+    },
+    "Gauge!roll": {
+      "path": "/robot_health.roll",
+      "minValue": -3.14159,
+      "maxValue": 3.14159,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": ["#f44336", "#4caf50"],
+      "reverse": false,
+      "foxglovePanelTitle": "Roll [-pi,pi]"
+    },
+    "Gauge!yaw": {
+      "path": "/robot_health.yaw",
+      "minValue": -3.14159,
+      "maxValue": 3.14159,
+      "colorMap": "red-yellow-green",
+      "colorMode": "colormap",
+      "gradient": ["#f44336", "#4caf50"],
+      "reverse": false,
+      "foxglovePanelTitle": "Yaw [-pi,pi]"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": "3D!scout",
+    "second": {
+      "first": {
+        "first": "Gauge!speed",
+        "second": "Gauge!pitch",
+        "direction": "row",
+        "splitPercentage": 50
+      },
+      "second": {
+        "first": "Gauge!roll",
+        "second": "Gauge!yaw",
+        "direction": "row",
+        "splitPercentage": 50
+      },
+      "direction": "column",
+      "splitPercentage": 50
+    },
+    "direction": "row",
+    "splitPercentage": 75
+  }
+}

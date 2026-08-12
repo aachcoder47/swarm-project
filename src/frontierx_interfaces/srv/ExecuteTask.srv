@@ -1,0 +1,38 @@
+# ExecuteTask.srv
+# Submit a structured task to the task executor.
+# Returns immediately; use the ExecuteTaskPlan action for feedback.
+
+# Task type identifier
+# Valid values: "navigate_to", "find_object", "follow_person",
+#               "patrol", "dock", "inspect", "report_status"
+string task_type
+
+# JSON-encoded task parameters
+# Examples:
+#   {"x": 1.5, "y": 2.3, "theta": 0.0}              for navigate_to
+#   {"class_name": "red_box", "timeout": 60.0}        for find_object
+#   {"waypoints": [[1,2],[3,4],[5,6]]}                 for patrol
+string parameters_json
+
+# Optional: task priority (0=normal, 1=high, 2=urgent)
+uint8 PRIORITY_NORMAL = 0
+uint8 PRIORITY_HIGH   = 1
+uint8 PRIORITY_URGENT = 2
+uint8 priority
+
+# Whether to preempt the current task
+bool preempt_current
+
+---
+
+# Whether the task was accepted
+bool accepted
+
+# Assigned task ID (use this to track progress via /task_status topic)
+string task_id
+
+# Rejection reason (if not accepted)
+string rejection_reason
+
+# Estimated duration in seconds (-1 if unknown)
+float32 estimated_duration_seconds

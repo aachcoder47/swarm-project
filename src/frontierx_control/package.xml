@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>frontierx_control</name>
+  <version>0.1.0</version>
+  <description>Differential-drive control hardware interface and twist multiplexer</description>
+  <maintainer email="robotics@frontierxlabs.com">FrontierX Labs</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>hardware_interface</depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

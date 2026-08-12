@@ -1,0 +1,20 @@
+# SetNavigationMode.srv
+# Switch the robot's navigation mode.
+
+# Requested mode
+uint8 SLAM          = 0   # Active SLAM (mapping + localization)
+uint8 LOCALIZATION  = 1   # Localization only (map loaded)
+uint8 EXPLORE       = 2   # Autonomous frontier exploration
+uint8 TELEOP        = 3   # Manual control only
+uint8 IDLE          = 4   # No navigation active
+uint8 requested_mode
+
+# Optional: path to map file (used when switching to LOCALIZATION mode)
+string map_file_path
+
+---
+
+bool success
+uint8 previous_mode
+uint8 current_mode
+string message

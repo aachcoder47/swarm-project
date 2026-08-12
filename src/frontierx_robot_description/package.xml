@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>frontierx_robot_description</name>
+  <version>0.1.0</version>
+  <description>
+    URDF/Xacro robot description for the FrontierX Scout autonomous mobile
+    robot. Includes chassis, wheels, casters, sensor suite (LiDAR, RGB camera,
+    depth camera, IMU), and TF frame definitions.
+  </description>
+
+  <maintainer email="robotics@frontierxlabs.com">FrontierX Labs</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>urdf</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

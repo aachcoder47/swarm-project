@@ -1,0 +1,197 @@
+<?xml version="1.0"?>
+<!--
+  FrontierX Scout — Sensor Definitions Xacro
+  ============================================
+  Defines all sensor links, joints, and sensor plugin macros:
+    - 2D LiDAR        → laser_frame
+    - RGB Camera       → camera_link
+    - Depth Camera     → camera_depth_frame / camera_depth_optical_frame
+    - IMU              → imu_link
+
+  All sensors are rigidly attached to base_link (or sensor_mast).
+  Sensor noise parameters are tuned to match real-world equivalents.
+
+  Coordinate conventions follow REP-103 and REP-105.
+-->
+<robot name="frontierx_scout" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ── Sensor Position Constants ────────────────────────── -->
+  <!-- LiDAR: mounted at top of sensor mast -->
+  <xacro:property name="lidar_x"   value="0.0"/>
+  <xacro:property name="lidar_y"   value="0.0"/>
+  <xacro:property name="lidar_z"   value="0.020"/>   <!-- above mast top -->
+
+  <!-- RGB / Depth Camera: front of chassis, mid-height -->
+  <xacro:property name="camera_x"  value="0.135"/>
+  <xacro:property name="camera_y"  value="0.0"/>
+  <xacro:property name="camera_z"  value="0.070"/>
+
+  <!-- IMU: center of base_link -->
+  <xacro:property name="imu_x"     value="0.0"/>
+  <xacro:property name="imu_y"     value="0.0"/>
+  <xacro:property name="imu_z"     value="0.010"/>
+
+  <!-- ── Sensor Noise Parameters ───────────────────────────── -->
+  <!-- LiDAR — equivalent to RPLIDAR A2 / Sick TiM551 -->
+  <xacro:property name="lidar_range_min"        value="0.120"/>    <!-- meters -->
+  <xacro:property name="lidar_range_max"        value="12.000"/>   <!-- meters -->
+  <xacro:property name="lidar_samples"          value="360"/>
+  <xacro:property name="lidar_update_rate"      value="10.0"/>     <!-- Hz -->
+  <xacro:property name="lidar_noise_mean"       value="0.0"/>
+  <xacro:property name="lidar_noise_stddev"     value="0.01"/>     <!-- meters -->
+
+  <!-- RGB Camera — 1280×720, 30 FPS, 69° HFOV -->
+  <xacro:property name="camera_hfov"            value="1.204"/>    <!-- radians ~69° -->
+  <xacro:property name="camera_width"           value="1280"/>
+  <xacro:property name="camera_height"          value="720"/>
+  <xacro:property name="camera_fps"             value="30"/>
+
+  <!-- Depth Camera — 640×480, 30 FPS, 0.3m–3.0m -->
+  <xacro:property name="depth_hfov"             value="1.047"/>    <!-- radians ~60° -->
+  <xacro:property name="depth_width"            value="640"/>
+  <xacro:property name="depth_height"           value="480"/>
+  <xacro:property name="depth_fps"              value="30"/>
+  <xacro:property name="depth_near"             value="0.300"/>
+  <xacro:property name="depth_far"              value="3.000"/>
+
+  <!-- IMU — 6-DOF, 100 Hz, modeled after MPU-6050 class -->
+  <xacro:property name="imu_rate"               value="100"/>
+  <xacro:property name="imu_gyro_noise"         value="0.00014"/>  <!-- rad/s/sqrt(Hz) -->
+  <xacro:property name="imu_accel_noise"        value="0.0016"/>   <!-- m/s²/sqrt(Hz) -->
+  <xacro:property name="imu_gyro_bias"          value="0.0001"/>
+  <xacro:property name="imu_accel_bias"         value="0.0002"/>
+
+  <!-- ── Sensors Macro ─────────────────────────────────────── -->
+  <xacro:macro name="frontierx_scout_sensors">
+
+    <!-- ╔════════════════════════════════════╗ -->
+    <!-- ║   2D LiDAR — laser_frame           ║ -->
+    <!-- ╚════════════════════════════════════╝ -->
+    <link name="laser_frame">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.040" length="0.040"/>
+        </geometry>
+        <material name="lidar_material">
+          <color rgba="0.05 0.05 0.05 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.040" length="0.040"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.180"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="laser_frame_joint" type="fixed">
+      <parent link="sensor_mast"/>
+      <child link="laser_frame"/>
+      <!-- sensor_mast top is at z=0.200; LiDAR sits on top -->
+      <origin xyz="${lidar_x} ${lidar_y} 0.220" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ╔════════════════════════════════════╗ -->
+    <!-- ║   RGB Camera — camera_link         ║ -->
+    <!-- ╚════════════════════════════════════╝ -->
+    <link name="camera_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.090 0.025"/>
+        </geometry>
+        <material name="camera_material">
+          <color rgba="0.08 0.08 0.10 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.025 0.090 0.025"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.070"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="${camera_x} ${camera_y} ${camera_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- camera optical frame: REP-103 convention (Z forward, X right, Y down) -->
+    <link name="camera_optical_frame"/>
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <!-- ╔════════════════════════════════════╗ -->
+    <!-- ║   Depth Camera — camera_depth_frame║ -->
+    <!-- ╚════════════════════════════════════╝ -->
+    <!-- Depth camera is co-located with RGB, slight horizontal offset -->
+    <link name="camera_depth_frame">
+      <visual>
+        <geometry>
+          <box size="0.001 0.001 0.001"/>
+        </geometry>
+      </visual>
+    </link>
+
+    <joint name="camera_depth_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_depth_frame"/>
+      <!-- slight left offset for baseline (like RealSense D435i) -->
+      <origin xyz="0 0.015 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- depth optical frame -->
+    <link name="camera_depth_optical_frame"/>
+    <joint name="camera_depth_optical_joint" type="fixed">
+      <parent link="camera_depth_frame"/>
+      <child link="camera_depth_optical_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <!-- ╔════════════════════════════════════╗ -->
+    <!-- ║   IMU — imu_link                   ║ -->
+    <!-- ╚════════════════════════════════════╝ -->
+    <link name="imu_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.020 0.020 0.005"/>
+        </geometry>
+        <material name="imu_material">
+          <color rgba="0.0 0.5 0.8 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.020 0.020 0.005"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.010"/>
+        <inertia ixx="0.000001" ixy="0" ixz="0" iyy="0.000001" iyz="0" izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <joint name="imu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="imu_link"/>
+      <origin xyz="${imu_x} ${imu_y} ${imu_z}" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

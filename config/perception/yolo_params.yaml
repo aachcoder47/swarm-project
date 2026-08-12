@@ -1,0 +1,92 @@
+# FrontierX Scout — Perception / YOLOv8 Parameters
+# ===================================================
+# Configuration for the frontierx_perception perception pipeline.
+#
+# Components:
+#   - YOLOv8 object detector
+#   - ByteTrack multi-object tracker
+#   - Depth-fusion 3D localizer
+#
+# Documentation: docs/05-perception.md
+
+frontierx_perception:
+  ros__parameters:
+
+    # ── Detector ─────────────────────────────────────────────
+    detector:
+      model_type: "yolov8"              # yolov8 | yolov8-seg | custom
+      model_size: "m"                   # n (nano), s, m, l, x
+      model_path: ""                    # Leave empty to use default download
+      weights_path: "/opt/frontierx/models/yolov8m.pt"
+
+      # Inference backend
+      backend: "torch"                  # torch | onnx | tensorrt
+      device: "cuda:0"                  # cuda:0 | cpu
+
+      # Detection thresholds
+      confidence_threshold: 0.40        # Minimum detection confidence
+      iou_threshold: 0.45               # NMS IoU threshold
+      max_detections: 50                # Max detections per frame
+
+      # Image preprocessing
+      input_width: 640
+      input_height: 640
+      normalize: true
+
+      # Class filtering (empty = all classes)
+      # COCO class names
+      enabled_classes:
+        - "person"
+        - "chair"
+        - "couch"
+        - "dining table"
+        - "laptop"
+        - "cell phone"
+        - "bottle"
+        - "cup"
+        - "backpack"
+        - "suitcase"
+        - "box"
+
+    # ── Tracker (ByteTrack) ───────────────────────────────────
+    tracker:
+      enabled: true
+      algorithm: "bytetrack"           # bytetrack | botsort
+      track_thresh: 0.50
+      track_buffer: 30                 # Frames before track is dropped
+      match_thresh: 0.80
+      min_box_area: 10
+      frame_rate: 30
+
+    # ── 3D Localization ───────────────────────────────────────
+    depth_fusion:
+      enabled: true
+      depth_topic: "/camera/depth/image_raw"
+      camera_info_topic: "/camera/camera_info"
+      depth_min: 0.3                   # meters
+      depth_max: 3.0                   # meters
+      depth_sample_mode: "center"      # center | bbox_mean | percentile
+      depth_percentile: 0.5
+      point_cloud_topic: "/camera/depth/points"
+      use_point_cloud: false           # True = use pointcloud; False = depth image
+
+    # ── World Model Integration ───────────────────────────────
+    world_model:
+      enabled: true
+      min_observations_to_add: 3      # How many consecutive detections needed
+      object_update_distance: 0.5     # meters: merge if within this distance
+      object_ttl_seconds: 120.0       # Seconds before object marked stale
+
+    # ── Performance ───────────────────────────────────────────
+    performance:
+      max_fps: 30
+      skip_frames: 0                  # Skip N frames between detections
+      publish_debug_image: true       # Publish annotated image for debugging
+      debug_image_topic: "/perception/debug_image"
+
+    # ── ROS 2 Topics ─────────────────────────────────────────
+    topics:
+      input_image: "/camera/image_raw"
+      output_detections: "/perception/detections"
+      output_tracks: "/perception/tracks"
+      output_markers: "/perception/markers"     # RViz2 visualization
