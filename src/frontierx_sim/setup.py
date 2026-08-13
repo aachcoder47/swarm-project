@@ -19,6 +19,7 @@ setup(
         ('share/' + package_name + '/launch', package_files('launch', '*.py')),
         ('share/' + package_name + '/worlds', package_files('worlds', '*.sdf')),
         ('share/' + package_name + '/config', package_files('config', '*.yaml')),
+        ('share/' + package_name + '/scripts', package_files('scripts', '*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,6 +28,8 @@ setup(
     description='Simulation interface for FrontierX robot bodies using Isaac Sim and Gazebo Sim',
     license='Apache-2.0',
     entry_points={
-        'console_scripts': [],
+        'console_scripts': [
+            'joint_state_publisher = frontierx_sim.scripts.joint_state_publisher:main',
+        ],
     },
 )

@@ -42,7 +42,9 @@
     <plugin filename="gz-sim-navsat-system"
             name="gz::sim::systems::NavSat"/>
     <plugin filename="gz-sim-joint-state-publisher-system"
-            name="gz::sim::systems::JointStatePublisher"/>
+            name="gz::sim::systems::JointStatePublisher">
+      <publish_link_pose>true</publish_link_pose>
+    </plugin>
 
     <!-- ── Gravity ────────────────────────────────────────── -->
     <gravity>0 0 -9.8</gravity>
