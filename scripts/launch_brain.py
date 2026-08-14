@@ -34,13 +34,19 @@ def main() -> None:
     print("===============================================================")
 
     brain_system = CentralBrainSystem()
+    # Register demo robots and objects if the method exists
+    if hasattr(brain_system, 'register_demo_robots_and_objects'):
+        brain_system.register_demo_robots_and_objects()
+        brain_logger.info("Demo robots and world objects registered.")
+    else:
+        brain_logger.warning("register_demo_robots_and_objects method not found - skipping demo registration.")
     brain_logger.info(f"Initialized Central AI Brain. Mode: ROS 2={args.ros2}, IsaacSim={args.isaac_sim}")
 
     if FASTAPI_AVAILABLE:
         try:
             import uvicorn
-            print(f"🚀 Launching FastAPI Gateway on http://{args.host}:{args.port}")
-            print(f"📊 Web Application Dashboard available at: dashboard/index.html")
+            print(f"Launching FastAPI Gateway on http://{args.host}:{args.port}")
+            print(f"Web Application Dashboard available at: dashboard/index.html")
             app = create_app()
             uvicorn.run(app, host=args.host, port=args.port)
         except ImportError:

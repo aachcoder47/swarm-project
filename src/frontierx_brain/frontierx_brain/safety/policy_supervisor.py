@@ -17,24 +17,9 @@ import math
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
-from frontierx_brain.registry.robot_registry import RobotBodySpec, RobotStatus
+from frontierx_brain.core.schemas import ALLOWED_ACTION_WHITELIST, RobotStatus
+from frontierx_brain.registry.robot_registry import RobotBodySpec
 from frontierx_brain.observability.observability import brain_logger
-
-
-ALLOWED_ACTION_WHITELIST = {
-    "navigate_to",
-    "find_object",
-    "follow_person",
-    "patrol",
-    "dock",
-    "inspect",
-    "report_status",
-    "query_world",
-    "wait",
-    "arm_pick",
-    "arm_place",
-    "aerial_scan",
-}
 
 
 class SafetyPolicyConfig(BaseModel):
@@ -94,13 +79,27 @@ class PolicySupervisor:
                 reason=f"Action '{task_type}' is forbidden by safety whitelist policy.",
             )
 
-        # 2. Check for illegal low-level motor attempt in LLM plan
+        # 2. Check for illegal low-level motor attempt in LLM plan (recursive, nested dicts too)
         forbidden_keys = {"cmd_vel", "pwm", "torque", "voltage", "motor_id", "actuator"}
-        if any(k in params for k in forbidden_keys):
+
+        def _contains_forbidden(d: Any) -> bool:
+            if isinstance(d, dict):
+                for k, v in d.items():
+                    if k in forbidden_keys:
+                        return True
+                    if isinstance(v, (dict, list)) and _contains_forbidden(v):
+                        return True
+            elif isinstance(d, list):
+                for item in d:
+                    if _contains_forbidden(item):
+                        return True
+            return False
+
+        if _contains_forbidden(params):
             brain_logger.error(f"Safety Violation: LLM plan attempted direct low-level motor parameter access!")
             return SafetyValidationResult(
                 is_safe=False,
-                reason="Direct actuator control parameters are forbidden by AI control isolation policy.",
+                reason="Direct actuator control parameters (cmd_vel/pwm/etc.) are forbidden by AI control isolation policy. Detected unsafe parameter in task step.",
             )
 
         # 3. Robot State & Battery Gate Check

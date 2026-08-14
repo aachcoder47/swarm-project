@@ -12,10 +12,10 @@ from sensor_msgs.msg import JointState
 class SimpleJointStatePublisher(Node):
     def __init__(self):
         super().__init__('simple_joint_state_publisher')
-        
+
         self.publisher = self.create_publisher(JointState, '/joint_states', 10)
         self.timer = self.create_timer(0.1, self.publish_joint_states)
-        
+
         # Define joint names for the Scout robot
         self.joint_names = [
             'wheel_left_link_joint',
@@ -30,7 +30,7 @@ class SimpleJointStatePublisher(Node):
             'camera_depth_optical_joint',
             'imu_joint',
         ]
-        
+
         self.get_logger().info('Simple Joint State Publisher started')
 
     def publish_joint_states(self):
@@ -40,7 +40,7 @@ class SimpleJointStatePublisher(Node):
         msg.position = [0.0] * len(self.joint_names)
         msg.velocity = [0.0] * len(self.joint_names)
         msg.effort = [0.0] * len(self.joint_names)
-        
+
         self.publisher.publish(msg)
 
 

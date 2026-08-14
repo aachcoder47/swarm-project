@@ -1,15 +1,17 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 package_name = 'frontierx_robot_agent'
 
 setup(
     name=package_name,
     version='0.1.0',
-    packages=[package_name],
+    packages=find_packages(exclude=['test']),
     data_files=[
-        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('lib/' + package_name, ['frontierx_robot_agent/agent_node.py']),
+        ('lib/' + package_name,
+            [package_name + '/agent_node.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

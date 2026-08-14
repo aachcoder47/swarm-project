@@ -1,1647 +1,582 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FrontierX Labs — Robotics Platform Dashboard</title>
-  <meta name="description" content="FrontierX Scout autonomous robotics platform — live project dashboard, architecture, roadmap, and benchmarks."/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <style>
-    /* ═══════════════════════════════════════════════════════
-       DESIGN TOKENS
-    ═══════════════════════════════════════════════════════ */
-    :root {
-      --bg-void:        #03050a;
-      --bg-deep:        #060c16;
-      --bg-panel:       #0b1424;
-      --bg-card:        #0f1d30;
-      --bg-card-hover:  #132338;
-      --bg-glass:       rgba(11,20,36,0.7);
-
-      --border:         rgba(0,200,255,0.08);
-      --border-bright:  rgba(0,200,255,0.22);
-      --border-accent:  rgba(0,200,255,0.45);
-
-      --cyan:           #00c8ff;
-      --cyan-dim:       rgba(0,200,255,0.15);
-      --cyan-glow:      rgba(0,200,255,0.35);
-      --green:          #00ff9d;
-      --green-dim:      rgba(0,255,157,0.12);
-      --amber:          #ffb830;
-      --amber-dim:      rgba(255,184,48,0.12);
-      --red:            #ff4444;
-      --red-dim:        rgba(255,68,68,0.12);
-      --purple:         #a855f7;
-      --purple-dim:     rgba(168,85,247,0.12);
-
-      --text-primary:   #e8f4ff;
-      --text-secondary: #7ba3c8;
-      --text-muted:     #3d5a7a;
-      --text-accent:    #00c8ff;
-
-      --font-sans:      'Inter', system-ui, sans-serif;
-      --font-mono:      'JetBrains Mono', monospace;
-
-      --radius-sm:      6px;
-      --radius-md:      12px;
-      --radius-lg:      18px;
-      --radius-xl:      24px;
-
-      --glow-cyan:      0 0 40px rgba(0,200,255,0.20), 0 0 80px rgba(0,200,255,0.08);
-      --glow-green:     0 0 30px rgba(0,255,157,0.20);
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       RESET & BASE
-    ═══════════════════════════════════════════════════════ */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--bg-void);
-      color: var(--text-primary);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* animated grid background */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,200,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,200,255,0.025) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* top radial glow */
-    body::after {
-      content: '';
-      position: fixed;
-      top: -30vh;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 900px;
-      height: 600px;
-      background: radial-gradient(ellipse, rgba(0,200,255,0.07) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       LAYOUT WRAPPERS
-    ═══════════════════════════════════════════════════════ */
-    .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
-
-    /* ═══════════════════════════════════════════════════════
-       NAVIGATION
-    ═══════════════════════════════════════════════════════ */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: rgba(3,5,10,0.85);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 64px;
-      gap: 32px;
-    }
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-    }
-    .nav-logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px rgba(0,200,255,0.3);
-    }
-    .nav-brand {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: -0.01em;
-    }
-    .nav-brand span { color: var(--cyan); }
-    .nav-links { display: flex; gap: 6px; }
-    .nav-link {
-      padding: 6px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: all 0.2s;
-      letter-spacing: 0.01em;
-    }
-    .nav-link:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
-    .nav-badge {
-      padding: 4px 12px;
-      border-radius: 20px;
-      background: var(--cyan-dim);
-      border: 1px solid var(--border-accent);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--cyan);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       HERO
-    ═══════════════════════════════════════════════════════ */
-    .hero {
-      padding: 100px 0 80px;
-      text-align: center;
-      position: relative;
-    }
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      border-radius: 20px;
-      background: var(--cyan-dim);
-      border: 1px solid var(--border-accent);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--cyan);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 32px;
-    }
-    .hero-eyebrow::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-    .hero-title {
-      font-size: clamp(48px, 7vw, 90px);
-      font-weight: 900;
-      line-height: 1.0;
-      letter-spacing: -0.04em;
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, #ffffff 0%, var(--cyan) 50%, var(--purple) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero-sub {
-      font-size: 20px;
-      color: var(--text-secondary);
-      max-width: 620px;
-      margin: 0 auto 48px;
-      line-height: 1.6;
-      font-weight: 400;
-    }
-    .hero-sub strong { color: var(--cyan); font-weight: 600; }
-    .hero-actions {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: var(--radius-md);
-      font-size: 15px;
-      font-weight: 600;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-      transition: all 0.25s;
-      letter-spacing: -0.01em;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--cyan) 0%, #0099cc 100%);
-      color: #000;
-      box-shadow: 0 0 30px rgba(0,200,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 50px rgba(0,200,255,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-    }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border-bright);
-    }
-    .btn-ghost:hover {
-      color: var(--text-primary);
-      border-color: var(--border-accent);
-      background: rgba(255,255,255,0.03);
-    }
-    .hero-stats {
-      display: flex;
-      gap: 48px;
-      justify-content: center;
-      margin-top: 72px;
-      flex-wrap: wrap;
-    }
-    .hero-stat { text-align: center; }
-    .hero-stat-value {
-      font-size: 36px;
-      font-weight: 800;
-      color: var(--cyan);
-      letter-spacing: -0.03em;
-      line-height: 1;
-    }
-    .hero-stat-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       SECTIONS
-    ═══════════════════════════════════════════════════════ */
-    section { padding: 80px 0; position: relative; z-index: 1; }
-    .section-header { margin-bottom: 56px; }
-    .section-eyebrow {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--cyan);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: clamp(28px, 3.5vw, 42px);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-    }
-    .section-desc {
-      color: var(--text-secondary);
-      font-size: 17px;
-      line-height: 1.6;
-      margin-top: 16px;
-      max-width: 620px;
-    }
-    .divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 0;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       CARDS
-    ═══════════════════════════════════════════════════════ */
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 28px;
-      transition: all 0.3s;
-    }
-    .card:hover {
-      border-color: var(--border-bright);
-      background: var(--bg-card-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-    }
-    .card-icon {
-      font-size: 28px;
-      margin-bottom: 16px;
-    }
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-    .card-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-
-    /* ═══════════════════════════════════════════════════════
-       ARCHITECTURE DIAGRAM
-    ═══════════════════════════════════════════════════════ */
-    .arch-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 48px;
-      position: relative;
-      overflow: hidden;
-    }
-    .arch-container::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
-    }
-    .arch-stack {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-    }
-    .arch-layer {
-      width: 100%;
-      max-width: 800px;
-    }
-    .arch-node {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 16px 24px;
-      border-radius: var(--radius-md);
-      border: 1px solid;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: center;
-      cursor: default;
-      transition: all 0.2s;
-      margin: 0 auto;
-    }
-    .arch-node:hover { transform: scale(1.02); }
-    .arch-node.cyan {
-      background: var(--cyan-dim);
-      border-color: var(--border-accent);
-      color: var(--cyan);
-      width: 55%;
-    }
-    .arch-node.green {
-      background: var(--green-dim);
-      border-color: rgba(0,255,157,0.3);
-      color: var(--green);
-      width: 65%;
-    }
-    .arch-node.purple {
-      background: var(--purple-dim);
-      border-color: rgba(168,85,247,0.3);
-      color: var(--purple);
-      width: 75%;
-    }
-    .arch-node.amber {
-      background: var(--amber-dim);
-      border-color: rgba(255,184,48,0.3);
-      color: var(--amber);
-      width: 85%;
-    }
-    .arch-node.blue {
-      background: rgba(59,130,246,0.12);
-      border-color: rgba(59,130,246,0.3);
-      color: #60a5fa;
-      width: 90%;
-    }
-    .arch-node.full {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border-color: var(--border);
-      color: var(--text-secondary);
-    }
-    .arch-arrow {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 20px;
-      padding: 6px 0;
-      line-height: 1;
-    }
-    .arch-row {
-      display: flex;
-      gap: 16px;
-      width: 100%;
-      margin: 0 auto;
-      max-width: 800px;
-    }
-    .arch-row .arch-node {
-      flex: 1;
-      width: auto;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       PHASE ROADMAP
-    ═══════════════════════════════════════════════════════ */
-    .phase-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
-    .phase-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-    .phase-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      opacity: 0.8;
-    }
-    .phase-card.planned::before { background: var(--border-accent); }
-    .phase-card.done::before   { background: var(--green); }
-    .phase-card.active::before { background: var(--amber); animation: shimmer 2s infinite; }
-    @keyframes shimmer {
-      0%, 100% { opacity: 0.8; }
-      50% { opacity: 1; box-shadow: 0 0 20px rgba(255,184,48,0.5); }
-    }
-    .phase-card:hover {
-      border-color: var(--border-bright);
-      transform: translateY(-3px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-    }
-    .phase-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .phase-num {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      font-family: var(--font-mono);
-    }
-    .phase-badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 12px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .badge-planned { background: var(--cyan-dim); color: var(--cyan); border: 1px solid var(--border-accent); }
-    .badge-done    { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,157,0.3); }
-    .badge-active  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,184,48,0.3); }
-    .phase-title {
-      font-size: 17px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-    .phase-month {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 16px;
-      font-family: var(--font-mono);
-    }
-    .phase-items {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .phase-item {
-      font-size: 13px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .phase-item::before {
-      content: '›';
-      color: var(--cyan);
-      font-weight: 700;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       ROBOT SPEC
-    ═══════════════════════════════════════════════════════ */
-    .spec-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    .spec-table th {
-      text-align: left;
-      padding: 12px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-    }
-    .spec-table td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-secondary);
-      vertical-align: top;
-    }
-    .spec-table tr:last-child td { border-bottom: none; }
-    .spec-table tr:hover td { background: rgba(255,255,255,0.02); }
-    .spec-key { color: var(--text-primary); font-weight: 500; }
-    .spec-val { font-family: var(--font-mono); font-size: 13px; color: var(--cyan); }
-
-    /* ═══════════════════════════════════════════════════════
-       TF TREE
-    ═══════════════════════════════════════════════════════ */
-    .tf-tree {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      line-height: 1.8;
-      color: var(--text-secondary);
-      background: var(--bg-deep);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 28px 32px;
-    }
-    .tf-frame { color: var(--cyan); font-weight: 600; }
-    .tf-sensor { color: var(--green); }
-    .tf-connector { color: var(--text-muted); }
-
-    /* ═══════════════════════════════════════════════════════
-       TECH STACK BADGES
-    ═══════════════════════════════════════════════════════ */
-    .tech-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .tech-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      transition: all 0.2s;
-    }
-    .tech-badge:hover {
-      border-color: var(--border-accent);
-      color: var(--text-primary);
-      background: var(--bg-card-hover);
-    }
-    .tech-badge .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       BENCHMARK METRICS
-    ═══════════════════════════════════════════════════════ */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-    .metric-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      text-align: center;
-    }
-    .metric-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .metric-value {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      font-family: var(--font-mono);
-    }
-    .metric-unit {
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--text-muted);
-      margin-left: 2px;
-    }
-    .metric-desc { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-    .metric-status {
-      font-size: 11px;
-      margin-top: 12px;
-      padding: 3px 10px;
-      border-radius: 12px;
-      display: inline-block;
-      font-weight: 600;
-    }
-    .status-target  { background: var(--cyan-dim); color: var(--cyan); }
-    .status-planned { background: var(--amber-dim); color: var(--amber); }
-
-    /* ═══════════════════════════════════════════════════════
-       PACKAGE LIST
-    ═══════════════════════════════════════════════════════ */
-    .pkg-list {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .pkg-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      transition: all 0.2s;
-    }
-    .pkg-item:hover { background: rgba(255,255,255,0.03); }
-    .pkg-name {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--cyan);
-      min-width: 280px;
-    }
-    .pkg-desc { font-size: 13px; color: var(--text-secondary); flex: 1; }
-    .pkg-lang {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 4px;
-    }
-    .lang-python { background: rgba(59,130,246,0.15); color: #60a5fa; }
-    .lang-cpp    { background: rgba(168,85,247,0.15); color: var(--purple); }
-    .lang-mixed  { background: rgba(0,255,157,0.1); color: var(--green); }
-
-    /* ═══════════════════════════════════════════════════════
-       AGENT FLOW
-    ═══════════════════════════════════════════════════════ */
-    .flow-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 48px;
-    }
-    .flow-steps {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    .flow-step {
-      width: 100%;
-      padding: 14px 20px;
-      border-radius: var(--radius-md);
-      border: 1px solid;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: center;
-      position: relative;
-    }
-    .flow-step.input    { background: var(--green-dim); border-color: rgba(0,255,157,0.3); color: var(--green); }
-    .flow-step.llm      { background: var(--purple-dim); border-color: rgba(168,85,247,0.3); color: var(--purple); }
-    .flow-step.validate { background: var(--amber-dim); border-color: rgba(255,184,48,0.3); color: var(--amber); }
-    .flow-step.action   { background: var(--cyan-dim); border-color: var(--border-accent); color: var(--cyan); }
-    .flow-step.safety   { background: var(--red-dim); border-color: rgba(255,68,68,0.3); color: var(--red); }
-    .flow-step.robot    { background: rgba(255,255,255,0.05); border-color: var(--border); color: var(--text-secondary); }
-    .flow-arrow { color: var(--text-muted); font-size: 18px; padding: 6px 0; line-height: 1; }
-    .flow-note {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-style: italic;
-      margin-top: 4px;
-    }
-    .flow-label {
-      position: absolute;
-      right: -180px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 400;
-      font-family: var(--font-mono);
-      white-space: nowrap;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       FOOTER
-    ═══════════════════════════════════════════════════════ */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 48px 0;
-      position: relative;
-      z-index: 1;
-    }
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-    .footer-brand { font-size: 14px; color: var(--text-muted); }
-    .footer-brand strong { color: var(--text-secondary); }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-link { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
-    .footer-link:hover { color: var(--cyan); }
-
-    /* ═══════════════════════════════════════════════════════
-       SCROLLBAR
-    ═══════════════════════════════════════════════════════ */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg-void); }
-    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
-
-    /* ═══════════════════════════════════════════════════════
-       ANIMATIONS
-    ═══════════════════════════════════════════════════════ */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .fade-up { animation: fadeUp 0.6s ease both; }
-    .fade-up-1 { animation-delay: 0.1s; }
-    .fade-up-2 { animation-delay: 0.2s; }
-    .fade-up-3 { animation-delay: 0.3s; }
-    .fade-up-4 { animation-delay: 0.4s; }
-
-    /* ═══════════════════════════════════════════════════════
-       RESPONSIVE
-    ═══════════════════════════════════════════════════════ */
-    @media (max-width: 900px) {
-      .grid-4 { grid-template-columns: repeat(2, 1fr); }
-      .grid-3 { grid-template-columns: repeat(2, 1fr); }
-      .nav-links { display: none; }
-      .flow-label { display: none; }
-      .pkg-name { min-width: 200px; }
-    }
-    @media (max-width: 600px) {
-      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-      .hero-stats { gap: 24px; }
-      .arch-node.cyan, .arch-node.green, .arch-node.purple,
-      .arch-node.amber, .arch-node.blue { width: 100%; }
-      .arch-container { padding: 24px; }
-      .flow-container { padding: 24px; }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FrontierX — Central AI Brain Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --panel: #11171f;
+    --panel-2: #171f2a;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #26d07c;
+    --accent-2: #1f6feb;
+    --warn: #d29922;
+    --danger: #da3633;
+    --border: #233042;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 14px 20px; background: linear-gradient(90deg, #0f1722 0%, #142033 100%); border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+  header h1 span { color: var(--accent); font-weight: 800; }
+  .status-pill { display:inline-flex; align-items:center; gap:8px; padding: 4px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); }
+  .dot { width:8px; height:8px; border-radius:50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dot.danger { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  main { display: grid; grid-template-columns: 320px 1fr 340px; gap: 16px; padding: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .panel h2 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600;}
+  .panel h3 { margin: 2px 0 8px; font-size: 15px; }
+  .robot-card, .object-card, .log-line, .task-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px;}
+  .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .row b { color: var(--text); font-weight: 600; }
+  .battery { position: relative; width: 100%; height: 8px; background:#222a35; border-radius: 4px; overflow:hidden; margin-top: 4px;}
+  .battery > div { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent));}
+  .battery.low > div { background: linear-gradient(90deg, var(--warn), var(--danger));}
+  .tag { display:inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; background:#1e2b3f; color:#bcd3ef; margin-right: 4px; margin-top: 3px; }
+  .tag.cap { background:#1b2a1f; color:#a7e6bd; border:1px solid #23502f;}
+  .mid-top { display:flex; gap:14px; align-items:stretch;}
+  .world-canvas { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #0e151f; border:1px solid var(--border); border-radius: 10px; overflow:hidden;}
+  canvas { display:block; width: 100%; height: 100%; }
+  .cmd-input { display:flex; gap: 8px; margin-top: 10px; }
+  .cmd-input input { flex:1; background:#0c131d; color:var(--text); border:1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+  .cmd-input input:focus { outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 3px #1f6feb33; }
+  .btn { padding: 9px 14px; background: var(--accent); color: #05240f; border: none; border-radius: 8px; font-weight: 700; cursor:pointer;}
+  .btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--border);}
+  .btn.danger { background: var(--danger); color: white;}
+  .steps { margin-top: 12px; }
+  .step { display:flex; gap:10px; align-items:center; padding: 7px 10px; border-radius:6px; margin-bottom: 6px; background: var(--panel-2); border:1px solid var(--border); font-size: 13px;}
+  .step .idx { width: 22px; height: 22px; border-radius: 50%; background:#1e2b3f; display:grid; place-items:center; font-size: 11px; font-weight:700; color:#9db4d2;}
+  .step.done { border-color: #2f7a4e; background: #12251a;} .step.done .idx { background:#175f38; color:#c7fbdb; }
+  .step.run { border-color: #b68220; background:#241c09;} .step.run .idx { background:#8c661a; color:#ffe5b0;}
+  .step.fail { border-color: #8b2d2c; background:#2a1111;} .step.fail .idx { background:#8b2d2c; color:#ffcece;}
+  .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .metric { background: var(--panel-2); border:1px solid var(--border); padding: 8px 10px; border-radius: 8px;}
+  .metric h4 { margin: 0; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .metric p { margin: 4px 0 0; font-size: 18px; font-weight: 700; }
+  .metric.ok p { color: var(--accent);}
+  .metric.warn p { color: var(--warn);}
+  .metric.err p { color: var(--danger);}
+  .log-line { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color:#cdd9e5; padding:6px 8px; margin-bottom:4px;}
+  .log-line .ts { color: var(--muted); margin-right: 8px; }
+  .log-line.WARN { border-left: 3px solid var(--warn);}
+  .log-line.ERROR { border-left: 3px solid var(--danger);}
+  .robot-body { display:flex; gap:10px; align-items:flex-start;}
+  .robot-body .body-icon { width: 44px; height: 44px; border-radius: 10px; display:grid; place-items:center; font-size: 22px; flex: none;}
+  .robot-body.UGV .body-icon { background:#17231a; color: #3cf090; border: 1px solid #2f7a4e;}
+  .robot-body.ARM .body-icon { background:#1b2235; color: #7fb0ff; border: 1px solid #2f4b84;}
+  .robot-body.DRONE .body-icon { background:#271a2c; color: #e77cff; border: 1px solid #6b3486;}
+  .robot-body.OFFLINE .body-icon { filter: grayscale(1); opacity: 0.5; }
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; }
+  }
+</style>
 </head>
 <body>
-
-<!-- ── NAVIGATION ─────────────────────────────────────────── -->
-<nav>
-  <div class="container">
-    <div class="nav-inner">
-      <a href="#" class="nav-logo">
-        <div class="nav-logo-icon">🤖</div>
-        <span class="nav-brand">Frontier<span>X</span> Labs</span>
-      </a>
-      <div class="nav-links">
-        <a href="#architecture" class="nav-link">Architecture</a>
-        <a href="#robot"        class="nav-link">Robot</a>
-        <a href="#roadmap"      class="nav-link">Roadmap</a>
-        <a href="#packages"     class="nav-link">Packages</a>
-        <a href="#agent"        class="nav-link">AI Agent</a>
-        <a href="#benchmarks"   class="nav-link">Benchmarks</a>
-      </div>
-      <div class="nav-badge">⚡ Phase 0 — Active</div>
-    </div>
+<header>
+  <h1><span>FrontierX</span> · Central AI Brain Platform</h1>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <span class="status-pill"><span id="eStopPill" class="dot"></span> <span id="brainStatus">BRAIN ONLINE</span></span>
+    <span class="status-pill"><span class="dot" id="wsDot"></span> <span id="wsStatus">Connecting…</span></span>
+    <button class="btn danger" onclick="triggerEStop()">E-STOP</button>
+    <button class="btn ghost" onclick="clearEStop()">Clear E-Stop</button>
   </div>
-</nav>
+</header>
 
-<!-- ── HERO ──────────────────────────────────────────────── -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-eyebrow fade-up">FrontierX Scout — Simulation-First Autonomous Robotics</div>
-    <h1 class="hero-title fade-up fade-up-1">Build the machines<br/>of tomorrow.</h1>
-    <p class="hero-sub fade-up fade-up-2">
-      A modular autonomous mobile robotics platform built on
-      <strong>NVIDIA Isaac Sim</strong> and <strong>ROS 2</strong> —
-      validated fully in simulation, then transferred to real hardware.
-    </p>
-    <div class="hero-actions fade-up fade-up-3">
-      <a href="#roadmap" class="btn btn-primary">📡 View Roadmap</a>
-      <a href="#architecture" class="btn btn-ghost">🧠 Architecture</a>
-      <a href="../docs/01-system-architecture.md" class="btn btn-ghost">📄 Docs</a>
-    </div>
-    <div class="hero-stats fade-up fade-up-4">
-      <div class="hero-stat">
-        <div class="hero-stat-value">13</div>
-        <div class="hero-stat-label">ROS 2 Packages</div>
+<main>
+  <!-- LEFT: Robots -->
+  <section>
+    <div class="panel" style="margin-bottom:16px;">
+      <h2>Command Interface</h2>
+      <h3>Submit natural-language mission</h3>
+      <div class="cmd-input">
+        <input id="cmdInput" placeholder='e.g. "Find the generator and inspect it."' />
+        <button class="btn" onclick="submitCommand()">Send</button>
       </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">12</div>
-        <div class="hero-stat-label">Architecture Docs</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">12</div>
-        <div class="hero-stat-label">Month Roadmap</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value">20</div>
-        <div class="hero-stat-label">MVP Criteria</div>
+      <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+        <button class="btn ghost" style="padding:6px 10px; font-size:12px" onclick="quickCmd(0)">🔍 Find + Inspect (Demo 1)</button>
+        <button class="btn ghost" style="padding:6px 10px; font-size:12px" onclick="quickCmd(1)">🤖 Inspect + Arm Pick (Demo 2)</button>
       </div>
     </div>
-  </div>
-</section>
 
-<hr class="divider"/>
+    <div class="panel">
+      <h2>Robot Registry</h2>
+      <div id="robotList"></div>
+    </div>
+  </section>
 
-<!-- ── LIVE CENTRAL AI BRAIN CONTROL CENTER ─────────────────── -->
-<section id="brain-control" style="background:var(--bg-deep);">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Central Intelligence Suite</div>
-      <h2 class="section-title">Central AI Brain & Multi-Robot Control</h2>
-      <p class="section-desc">Issue natural-language commands to the Central AI Brain. Watch the LLM reason, select optimal heterogeneous bodies, validate safety constraints, and dispatch execution skills over ROS 2.</p>
+  <!-- CENTER: Command + World Canvas + Plan/Steps -->
+  <section>
+    <div class="panel" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <h2>Factory World Map (40 × 40 m)</h2>
+        <div id="metrics" class="metric-grid" style="width:auto; gap: 6px;"></div>
+      </div>
+      <div class="world-canvas" style="margin-top:10px;">
+        <canvas id="mapCanvas" width="800" height="800"></canvas>
+      </div>
     </div>
 
-    <!-- MAIN CONTROL GRID -->
-    <div class="grid-2" style="gap:24px; align-items:start;">
-      
-      <!-- LEFT COLUMN: COMMAND INPUT & REASONING TERMINAL -->
-      <div>
-        <div class="card" style="margin-bottom:24px; border-color:var(--border-accent);">
-          <div style="font-size:14px; font-weight:700; color:var(--cyan); margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-            <span>🧠 Natural Language AI Console</span>
-            <span id="backend-status-badge" style="font-size:11px; padding:3px 8px; border-radius:10px; background:var(--green-dim); color:var(--green); border:1px solid rgba(0,255,157,0.3);">
-              ● Central Brain Ready
-            </span>
-          </div>
-
-          <div style="margin-bottom:12px;">
-            <input type="text" id="cmd-input" placeholder="e.g. Go to the generator, inspect it, identify anything abnormal, and return." 
-                   style="width:100%; padding:14px 16px; background:var(--bg-void); border:1px solid var(--border-bright); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-sans); font-size:14px; outline:none; transition:border 0.2s;"
-                   onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='var(--border-bright)'" />
-          </div>
-
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
-            <button onclick="setSampleCmd('Go to the generator, inspect it, identify anything abnormal, and return.')" 
-                    style="padding:6px 12px; background:rgba(0,200,255,0.08); border:1px solid var(--border-accent); border-radius:6px; color:var(--cyan); font-size:12px; cursor:pointer;">
-              🏭 Generator Inspection
-            </button>
-            <button onclick="setSampleCmd('Find the red box in storage bay.')" 
-                    style="padding:6px 12px; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.3); border-radius:6px; color:var(--purple); font-size:12px; cursor:pointer;">
-              📦 Find Object
-            </button>
-            <button onclick="setSampleCmd('Patrol waypoints (0,0), (5,5), (0,5), return to dock.')" 
-                    style="padding:6px 12px; background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.3); border-radius:6px; color:var(--green); font-size:12px; cursor:pointer;">
-              🔄 Waypoint Patrol
-            </button>
-          </div>
-
-          <div style="display:flex; gap:12px;">
-            <button onclick="executeBrainCommand()" id="btn-execute-cmd" class="btn btn-primary" style="flex:1; justify-content:center;">
-              ⚡ Plan & Execute Task
-            </button>
-            <button onclick="triggerEstop()" id="btn-estop" class="btn" style="background:var(--red-dim); color:var(--red); border:1px solid rgba(255,68,68,0.4); justify-content:center;">
-              🚨 E-STOP
-            </button>
-          </div>
-        </div>
-
-        <!-- REASONING & STEP EXECUTION FEED -->
-        <div class="card">
-          <div style="font-size:13px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:16px;">
-            📋 Task Execution Trace & Reasoning Log
-          </div>
-          <div id="reasoning-box" style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary); line-height:1.6; background:var(--bg-void); padding:16px; border-radius:var(--radius-md); border:1px solid var(--border); min-height:160px; max-height:300px; overflow-y:auto;">
-            <div style="color:var(--text-muted);">Ready for command. Enter prompt above to initiate reasoning and skill execution.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT COLUMN: MULTI-ROBOT FLEET & WORLD MODEL -->
-      <div>
-        <!-- ROBOT FLEET MONITOR -->
-        <div class="card" style="margin-bottom:24px;">
-          <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:16px; display:flex; justify-content:space-between;">
-            <span>🤖 Multi-Robot Heterogeneous Fleet</span>
-            <span style="font-size:12px; color:var(--cyan); font-family:var(--font-mono);">4 Active Bodies</span>
-          </div>
-
-          <div id="fleet-list" style="display:flex; flex-direction:column; gap:12px;">
-            <!-- Robot Card 1 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-void); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border);">
-              <div>
-                <div style="font-weight:700; font-size:14px; color:var(--cyan);">ugv_scout_01 <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(Wheeled UGV)</span></div>
-                <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Location: (0.0, 0.0) | IP: 127.0.0.1</div>
-                <div style="font-size:11px; color:var(--purple); margin-top:4px;">Capabilities: navigate_ground, object_search, docking</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:12px; font-weight:700; color:var(--green);">IDLE</div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Battery: 98%</div>
-              </div>
-            </div>
-
-            <!-- Robot Card 2 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-void); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border);">
-              <div>
-                <div style="font-weight:700; font-size:14px; color:var(--cyan);">arm_manipulator_01 <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(Robotic Arm)</span></div>
-                <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Location: (5.0, 3.0) | Payload: 10kg</div>
-                <div style="font-size:11px; color:var(--purple); margin-top:4px;">Capabilities: manipulate_arm, thermal_inspection</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:12px; font-weight:700; color:var(--green);">IDLE</div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Battery: 100%</div>
-              </div>
-            </div>
-
-            <!-- Robot Card 3 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-void); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border);">
-              <div>
-                <div style="font-weight:700; font-size:14px; color:var(--cyan);">quad_walker_01 <span style="font-size:11px; font-weight:400; color:var(--text-muted);">(Quadruped)</span></div>
-                <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Location: (-2.0, 4.0) | Max Speed: 0.8m/s</div>
-                <div style="font-size:11px; color:var(--purple); margin-top:4px;">Capabilities: stair_climb, thermal_inspection, heavy_payload</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:12px; font-weight:700; color:var(--green);">IDLE</div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Battery: 85%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- WORLD MODEL & SAFETY CARD -->
-        <div class="card">
-          <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; justify-content:space-between;">
-            <span>🌍 Central Spatial World Model</span>
-            <span style="font-size:12px; color:var(--green); font-family:var(--font-mono);">3 Tracked Entities</span>
-          </div>
-
-          <div id="world-objects-list" style="font-size:13px; color:var(--text-secondary); display:flex; flex-direction:column; gap:8px;">
-            <div style="background:var(--bg-void); padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between;">
-              <span><strong>gen_01</strong> (generator) at (5.2, 3.1, 0.0)</span>
-              <span style="color:var(--amber);">Status: UNINSPECTED</span>
-            </div>
-            <div style="background:var(--bg-void); padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between;">
-              <span><strong>box_red</strong> (red_box) at (2.0, -1.5, 0.0)</span>
-              <span style="color:var(--green);">Status: NORMAL</span>
-            </div>
-            <div style="background:var(--bg-void); padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between;">
-              <span><strong>dock_station_01</strong> (docking_station) at (0.0, 0.0, 0.0)</span>
-              <span style="color:var(--cyan);">Status: ACTIVE</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
+    <div class="panel">
+      <h2>Mission Plan & Status</h2>
+      <div id="currentPlan"><p style="color:var(--muted); margin:0;">No mission active. Submit a command above to begin.</p></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<hr class="divider"/>
-
-<!-- ── ARCHITECTURE ──────────────────────────────────────── -->
-<section id="architecture">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">System Architecture</div>
-      <h2 class="section-title">Full autonomy stack, layered<br/>for safety and modularity.</h2>
-      <p class="section-desc">Every layer is a separate ROS 2 package. Hardware interfaces are isolated at the bottom. AI operates only at the top — never touching actuators directly.</p>
+  <!-- RIGHT: World Objects / Events / Recent Tasks -->
+  <section>
+    <div class="panel" style="margin-bottom:16px;">
+      <h2>World Model Objects</h2>
+      <div id="worldObjects"></div>
     </div>
-
-    <div class="arch-container">
-      <div class="arch-stack">
-        <div class="arch-layer">
-          <div class="arch-node cyan">🧠 Natural Language / CLI Input</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node purple">🤖 FrontierX Robot Agent (LLM + Tool Layer)</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node amber">🛡️ Safety Validator & Task Dispatcher</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node green">🌍 World Model</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-row">
-            <div class="arch-node blue">👁️ Perception<br/><small style="font-weight:400;opacity:.7">Camera · LiDAR · YOLO · Tracking</small></div>
-            <div class="arch-node blue">🗺️ Navigation (Nav2)<br/><small style="font-weight:400;opacity:.7">Global · Local · Costmaps</small></div>
-          </div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node full">📍 Localization — EKF (odom + IMU) · SLAM Toolbox · AMCL</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node full">⚙️ Differential-Drive Controller · Twist Mux · Velocity Limiter</div>
-        </div>
-        <div class="arch-arrow">↓</div>
-        <div class="arch-layer">
-          <div class="arch-node full" style="border-color:var(--border-bright);color:var(--text-primary);">
-            🤖 FrontierX Scout — Isaac Sim (Simulation) / Physical Hardware (Phase 8+)
-          </div>
-        </div>
-      </div>
+    <div class="panel" style="margin-bottom:16px;">
+      <h2>Recent Missions</h2>
+      <div id="taskHistory"></div>
     </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── ROBOT SPEC ─────────────────────────────────────────── -->
-<section id="robot">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Robot Description</div>
-      <h2 class="section-title">FrontierX Scout</h2>
-      <p class="section-desc">A compact differential-drive autonomous mobile robot with a full sensor suite for perception, localization, and mapping.</p>
+    <div class="panel">
+      <h2>Event Log</h2>
+      <div id="logPanel" style="max-height:260px; overflow-y:auto;"></div>
     </div>
-
-    <div class="grid-2" style="gap:28px;align-items:start;">
-      <!-- Spec Table -->
-      <div class="card" style="padding:0;overflow:hidden;">
-        <table class="spec-table">
-          <thead>
-            <tr>
-              <th>Parameter</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="spec-key">Drive type</td><td class="spec-val">Differential (2-wheel)</td></tr>
-            <tr><td class="spec-key">Support wheels</td><td class="spec-val">2× caster</td></tr>
-            <tr><td class="spec-key">Base footprint</td><td class="spec-val">300mm × 250mm</td></tr>
-            <tr><td class="spec-key">Height (w/ mast)</td><td class="spec-val">360mm</td></tr>
-            <tr><td class="spec-key">Sim mass</td><td class="spec-val">~3.5 kg</td></tr>
-            <tr><td class="spec-key">Max velocity</td><td class="spec-val">0.5 m/s</td></tr>
-            <tr><td class="spec-key">Max angular vel.</td><td class="spec-val">1.0 rad/s</td></tr>
-            <tr><td class="spec-key">LiDAR</td><td class="spec-val">360° 2D, 12m range</td></tr>
-            <tr><td class="spec-key">RGB Camera</td><td class="spec-val">1280×720, 30 FPS, 69° FOV</td></tr>
-            <tr><td class="spec-key">Depth Camera</td><td class="spec-val">640×480, 30 FPS, 0.3–3.0m</td></tr>
-            <tr><td class="spec-key">IMU</td><td class="spec-val">6-DOF, 100 Hz</td></tr>
-            <tr><td class="spec-key">Compute (sim)</td><td class="spec-val">NVIDIA GPU (Isaac Sim)</td></tr>
-            <tr><td class="spec-key">Compute (target)</td><td class="spec-val">NVIDIA Jetson Orin Nano</td></tr>
-            <tr><td class="spec-key">ROS 2 distro</td><td class="spec-val">Humble Hawksbill (LTS)</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- TF Tree -->
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;">TF Frame Tree</div>
-        <div class="tf-tree">
-<span class="tf-frame">map</span>
-<span class="tf-connector"> └──</span> <span class="tf-frame">odom</span>
-<span class="tf-connector">     └──</span> <span class="tf-frame">base_footprint</span>
-<span class="tf-connector">          └──</span> <span class="tf-frame">base_link</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">wheel_left_link</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">wheel_right_link</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">caster_front_link</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">caster_rear_link</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">laser_frame</span>
-<span class="tf-connector">               ├──</span> <span class="tf-sensor">camera_link</span>
-<span class="tf-connector">               │    └──</span> <span class="tf-sensor">camera_depth_frame</span>
-<span class="tf-connector">               │         └──</span> <span class="tf-sensor">camera_depth_optical_frame</span>
-<span class="tf-connector">               └──</span> <span class="tf-sensor">imu_link</span>
-        </div>
-
-        <div style="margin-top:20px;">
-          <div style="font-size:13px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;">Sensor Topics</div>
-          <div class="pkg-list">
-            <div class="pkg-item"><span class="pkg-name">/scan</span><span class="pkg-desc" style="font-size:12px;">LiDAR sensor_msgs/LaserScan</span></div>
-            <div class="pkg-item"><span class="pkg-name">/camera/image_raw</span><span class="pkg-desc" style="font-size:12px;">RGB sensor_msgs/Image</span></div>
-            <div class="pkg-item"><span class="pkg-name">/camera/depth/image_raw</span><span class="pkg-desc" style="font-size:12px;">Depth sensor_msgs/Image</span></div>
-            <div class="pkg-item"><span class="pkg-name">/imu/data</span><span class="pkg-desc" style="font-size:12px;">sensor_msgs/Imu</span></div>
-            <div class="pkg-item"><span class="pkg-name">/odom</span><span class="pkg-desc" style="font-size:12px;">nav_msgs/Odometry</span></div>
-            <div class="pkg-item"><span class="pkg-name">/joint_states</span><span class="pkg-desc" style="font-size:12px;">sensor_msgs/JointState</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── ROADMAP ────────────────────────────────────────────── -->
-<section id="roadmap">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">12-Month Roadmap</div>
-      <h2 class="section-title">From zero to a fully autonomous<br/>simulation demo.</h2>
-    </div>
-
-    <div class="phase-grid">
-      <div class="phase-card active">
-        <div class="phase-header">
-          <span class="phase-num">Phase 0</span>
-          <span class="phase-badge badge-active">Active</span>
-        </div>
-        <div class="phase-title">Foundations</div>
-        <div class="phase-month">📅 Month 1</div>
-        <ul class="phase-items">
-          <li class="phase-item">Ubuntu 22.04 + ROS 2 Humble</li>
-          <li class="phase-item">Docker + NVIDIA Container Toolkit</li>
-          <li class="phase-item">Full repository scaffold</li>
-          <li class="phase-item">CI/CD GitHub Actions</li>
-          <li class="phase-item">All documentation structure</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 1</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Isaac Sim + URDF</div>
-        <div class="phase-month">📅 Month 2</div>
-        <ul class="phase-items">
-          <li class="phase-item">FrontierX Scout URDF/Xacro</li>
-          <li class="phase-item">All sensors publishing to ROS 2</li>
-          <li class="phase-item">Correct TF tree</li>
-          <li class="phase-item">RViz2 visualization</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 2</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">ROS 2 Bridge + Teleoperation</div>
-        <div class="phase-month">📅 Month 3</div>
-        <ul class="phase-items">
-          <li class="phase-item">Isaac Sim ↔ ROS 2 bridge</li>
-          <li class="phase-item">Keyboard teleoperation</li>
-          <li class="phase-item">Odometry + TF broadcast</li>
-          <li class="phase-item">Emergency stop</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 3</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">EKF Localization</div>
-        <div class="phase-month">📅 Month 4</div>
-        <ul class="phase-items">
-          <li class="phase-item">robot_localization EKF</li>
-          <li class="phase-item">IMU + odometry fusion</li>
-          <li class="phase-item">Position error &lt; 5cm / 5m</li>
-          <li class="phase-item">Automated benchmarks</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 4</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">SLAM Mapping</div>
-        <div class="phase-month">📅 Month 5</div>
-        <ul class="phase-items">
-          <li class="phase-item">SLAM Toolbox online async</li>
-          <li class="phase-item">Map save / reload</li>
-          <li class="phase-item">10m×10m room mapped</li>
-          <li class="phase-item">Accuracy vs ground truth</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 5</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Nav2 Navigation</div>
-        <div class="phase-month">📅 Month 6</div>
-        <ul class="phase-items">
-          <li class="phase-item">BT navigator, planners, costmaps</li>
-          <li class="phase-item">5/5 goal success, 0 collisions</li>
-          <li class="phase-item">Recovery behaviors</li>
-          <li class="phase-item">Dynamic re-planning</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 6</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Perception</div>
-        <div class="phase-month">📅 Month 7</div>
-        <ul class="phase-items">
-          <li class="phase-item">YOLOv8 ROS 2 node</li>
-          <li class="phase-item">ByteTrack multi-object tracking</li>
-          <li class="phase-item">mAP &gt; 80%, FPS &gt; 20</li>
-          <li class="phase-item">Synthetic Isaac Sim data</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 7</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Sensor Fusion + World Model</div>
-        <div class="phase-month">📅 Month 8</div>
-        <ul class="phase-items">
-          <li class="phase-item">LiDAR + Camera + Depth fusion</li>
-          <li class="phase-item">3D object localization in map</li>
-          <li class="phase-item">Persistent world model</li>
-          <li class="phase-item">QueryWorldModel ROS 2 service</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 8</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Object-Aware Navigation</div>
-        <div class="phase-month">📅 Month 9</div>
-        <ul class="phase-items">
-          <li class="phase-item">"Find the red box" via CLI</li>
-          <li class="phase-item">Visual object verification</li>
-          <li class="phase-item">Dynamic obstacle avoidance</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 9</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Persistent World Model</div>
-        <div class="phase-month">📅 Month 10</div>
-        <ul class="phase-items">
-          <li class="phase-item">SQLite persistence</li>
-          <li class="phase-item">Session continuity</li>
-          <li class="phase-item">Stale object TTL handling</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 10</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">AI Robot Agent</div>
-        <div class="phase-month">📅 Month 11</div>
-        <ul class="phase-items">
-          <li class="phase-item">ollama + LLaMA 3.1 8B</li>
-          <li class="phase-item">Structured task plans → ROS 2</li>
-          <li class="phase-item">Safety validator layer</li>
-          <li class="phase-item">"Find the red box" works</li>
-        </ul>
-      </div>
-      <div class="phase-card planned">
-        <div class="phase-header">
-          <span class="phase-num">Phase 11</span>
-          <span class="phase-badge badge-planned">Planned</span>
-        </div>
-        <div class="phase-title">Full MVP Demo</div>
-        <div class="phase-month">📅 Month 12</div>
-        <ul class="phase-items">
-          <li class="phase-item">All 20 MVP criteria</li>
-          <li class="phase-item">Benchmarks published</li>
-          <li class="phase-item">Demo video recorded</li>
-          <li class="phase-item">GitHub public + blog post</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── PACKAGES ───────────────────────────────────────────── -->
-<section id="packages">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">ROS 2 Package Architecture</div>
-      <h2 class="section-title">13 modular packages —<br/>each with one responsibility.</h2>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div class="pkg-list">
-        <div class="pkg-item" style="border-bottom:1px solid var(--border);padding:16px;background:rgba(255,255,255,0.02);">
-          <span class="pkg-name" style="color:var(--text-muted);font-size:12px;">PACKAGE NAME</span>
-          <span class="pkg-desc" style="color:var(--text-muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">DESCRIPTION</span>
-          <span class="pkg-lang" style="background:transparent;color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;">LANG</span>
-        </div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_interfaces</span><span class="pkg-desc">Custom ROS 2 messages, services, and actions shared across all packages</span><span class="pkg-lang lang-mixed">C++/IDL</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_robot_description</span><span class="pkg-desc">URDF/Xacro model, meshes, TF frames, joint limits, RViz2 configs</span><span class="pkg-lang lang-mixed">Xacro</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_bringup</span><span class="pkg-desc">Top-level launch files for simulation and real robot bringup</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_sim</span><span class="pkg-desc">Isaac Sim bridge, Gazebo fallback, sensor publisher nodes, world SDFs/USDs</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_control</span><span class="pkg-desc">Differential-drive controller, twist multiplexer, velocity/acceleration limiter</span><span class="pkg-lang lang-cpp">C++</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_localization</span><span class="pkg-desc">EKF node (robot_localization), AMCL wrapper, odometry calibration tools</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_mapping</span><span class="pkg-desc">SLAM Toolbox integration, map server, frontier exploration controller</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_navigation</span><span class="pkg-desc">Nav2 configuration, custom behaviors, costmap plugins, waypoint manager</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_perception</span><span class="pkg-desc">YOLOv8 detector node, ByteTrack tracker, depth fusion, 3D object localizer</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_tasks</span><span class="pkg-desc">Task executor action server, behavior trees, structured task validation</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_robot_agent</span><span class="pkg-desc">LLM agent (ollama/LLaMA 3.1), tool definitions, NL→task plan→ROS 2 bridge</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_diagnostics</span><span class="pkg-desc">Safety monitor, watchdog, sensor health checks, e-stop manager, state machine</span><span class="pkg-lang lang-cpp">C++</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_data</span><span class="pkg-desc">Benchmark runner, ROS bag recorder, metric calculator, result publisher</span><span class="pkg-lang lang-python">Python</span></div>
-        <div class="pkg-item"><span class="pkg-name">frontierx_visualization</span><span class="pkg-desc">RViz2 configurations, Foxglove Studio layouts, world model marker publisher</span><span class="pkg-lang lang-mixed">Python</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── AI AGENT ───────────────────────────────────────────── -->
-<section id="agent">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">AI Robot Agent</div>
-      <h2 class="section-title">Language → structured plan →<br/>deterministic robot action.</h2>
-      <p class="section-desc">The LLM operates at task-planning level only. All output is validated against a safety schema before any ROS 2 action is dispatched. The LLM can never directly write to /cmd_vel or any actuator topic.</p>
-    </div>
-
-    <div class="grid-2" style="gap:28px;align-items:start;">
-      <div class="flow-container">
-        <div style="font-size:14px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:28px;text-align:center;">Request Flow</div>
-        <div class="flow-steps">
-          <div class="flow-step input">🎤 "Find the red box and take me to it."</div>
-          <div class="flow-arrow">↓</div>
-          <div class="flow-step llm">🧠 LLaMA 3.1 8B (via ollama)<br/><span style="font-size:12px;opacity:.7;">Produces structured JSON task plan</span></div>
-          <div class="flow-arrow">↓</div>
-          <div class="flow-step validate">✅ Task Validator<br/><span style="font-size:12px;opacity:.7;">JSON schema · action whitelist · safety check</span></div>
-          <div class="flow-arrow">↓</div>
-          <div class="flow-step action">🎯 Action Dispatcher<br/><span style="font-size:12px;opacity:.7;">find_object() → navigate_to() → verify()</span></div>
-          <div class="flow-arrow">↓</div>
-          <div class="flow-step robot">🤖 ROS 2 Action Clients → Nav2 / Perception</div>
-          <div class="flow-arrow">↓</div>
-          <div class="flow-step input">✅ "I found the red box. Arrived at (3.2, 1.4)."</div>
-        </div>
-      </div>
-
-      <div>
-        <div style="font-size:14px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px;">Agent Tools</div>
-        <div class="pkg-list">
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">navigate_to(x, y, theta)</span><span class="pkg-desc" style="font-size:12px;">Navigate to map coordinates</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">find_object(class_name)</span><span class="pkg-desc" style="font-size:12px;">Search and locate object</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">follow_person(person_id)</span><span class="pkg-desc" style="font-size:12px;">Person-following behavior</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">dock()</span><span class="pkg-desc" style="font-size:12px;">Navigate to charging station</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">patrol(waypoints)</span><span class="pkg-desc" style="font-size:12px;">Sequential waypoint patrol</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">inspect(object_id)</span><span class="pkg-desc" style="font-size:12px;">Navigate to + visually inspect</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">query_world(query)</span><span class="pkg-desc" style="font-size:12px;">Query world model</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;">report_status()</span><span class="pkg-desc" style="font-size:12px;">Return system health</span></div>
-          <div class="pkg-item"><span class="pkg-name" style="font-size:12px;min-width:240px;color:var(--red);">e_stop()</span><span class="pkg-desc" style="font-size:12px;">Emergency halt (bypasses LLM)</span></div>
-        </div>
-
-        <div style="margin-top:28px;">
-          <div style="font-size:14px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;">Safety Rules</div>
-          <div class="card" style="background:var(--red-dim);border-color:rgba(255,68,68,0.2);">
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
-              🚫 LLM output is <strong style="color:var(--red);">never</strong> written to <code style="font-family:var(--font-mono);background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:4px;">/cmd_vel</code><br/>
-              ✅ All task plans validated against JSON schema<br/>
-              ✅ Velocity limits enforced in C++ controller<br/>
-              ✅ Proximity guard: LiDAR &lt; 0.15m → hard stop<br/>
-              ✅ Watchdog: all critical nodes heartbeat at 1Hz<br/>
-              ✅ E-stop is hardware-level, bypasses all software
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── BENCHMARKS ─────────────────────────────────────────── -->
-<section id="benchmarks">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Performance Targets</div>
-      <h2 class="section-title">Everything measured.<br/>Nothing assumed.</h2>
-    </div>
-
-    <div class="metric-grid">
-      <div class="metric-card">
-        <div class="metric-label">Navigation Success</div>
-        <div class="metric-value" style="color:var(--green);">90<span class="metric-unit">%</span></div>
-        <div class="metric-desc">Goals reached without collision</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Localization Error</div>
-        <div class="metric-value" style="color:var(--cyan);">10<span class="metric-unit">cm</span></div>
-        <div class="metric-desc">Max position error in map frame</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Object Detection mAP</div>
-        <div class="metric-value" style="color:var(--purple);">80<span class="metric-unit">%</span></div>
-        <div class="metric-desc">YOLOv8 on Isaac Sim objects</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Perception FPS</div>
-        <div class="metric-value" style="color:var(--amber);">20<span class="metric-unit">Hz</span></div>
-        <div class="metric-desc">Real-time detection rate</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Task Success (NL)</div>
-        <div class="metric-value" style="color:var(--green);">80<span class="metric-unit">%</span></div>
-        <div class="metric-desc">NL commands correctly executed</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Safety Block Rate</div>
-        <div class="metric-value" style="color:var(--red);">100<span class="metric-unit">%</span></div>
-        <div class="metric-desc">Invalid actions blocked</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">EKF Drift / 5m</div>
-        <div class="metric-value" style="color:var(--cyan);">5<span class="metric-unit">cm</span></div>
-        <div class="metric-desc">Odometry + IMU fusion error</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">System Startup</div>
-        <div class="metric-value" style="color:var(--amber);">60<span class="metric-unit">s</span></div>
-        <div class="metric-desc">Full stack ready from cold</div>
-        <span class="metric-status status-target">Target</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── TECH STACK ─────────────────────────────────────────── -->
-<section>
-  <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Technology Stack</div>
-      <h2 class="section-title">Standing on the shoulders<br/>of giants.</h2>
-      <p class="section-desc">We use battle-tested open-source infrastructure as the foundation. FrontierX proprietary IP is built on top — in the algorithms, data, autonomy logic, and eventually the hardware.</p>
-    </div>
-
-    <div class="tech-grid">
-      <div class="tech-badge"><span class="dot" style="background:#76b900;"></span>NVIDIA Isaac Sim</div>
-      <div class="tech-badge"><span class="dot" style="background:#009900;"></span>ROS 2 Humble</div>
-      <div class="tech-badge"><span class="dot" style="background:#ff6b00;"></span>Nav2</div>
-      <div class="tech-badge"><span class="dot" style="background:#00a8e8;"></span>SLAM Toolbox</div>
-      <div class="tech-badge"><span class="dot" style="background:#ee4c2c;"></span>PyTorch</div>
-      <div class="tech-badge"><span class="dot" style="background:#5c3ee8;"></span>YOLOv8</div>
-      <div class="tech-badge"><span class="dot" style="background:#0070c0;"></span>ByteTrack</div>
-      <div class="tech-badge"><span class="dot" style="background:#00bfff;"></span>robot_localization EKF</div>
-      <div class="tech-badge"><span class="dot" style="background:#ff4500;"></span>OpenCV</div>
-      <div class="tech-badge"><span class="dot" style="background:#76b900;"></span>TensorRT</div>
-      <div class="tech-badge"><span class="dot" style="background:#6c35de;"></span>ollama + LLaMA 3.1</div>
-      <div class="tech-badge"><span class="dot" style="background:#2496ed;"></span>Docker</div>
-      <div class="tech-badge"><span class="dot" style="background:#24292e;"></span>GitHub Actions</div>
-      <div class="tech-badge"><span class="dot" style="background:#3178c6;"></span>MoveIt 2 (Phase 8+)</div>
-      <div class="tech-badge"><span class="dot" style="background:#76b900;"></span>Isaac Lab (Phase 6)</div>
-      <div class="tech-badge"><span class="dot" style="background:#00a651;"></span>Foxglove Studio</div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ── FOOTER ─────────────────────────────────────────────── -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <strong>FrontierX Labs</strong> — Robotics · Autonomous Systems · Embedded · Semiconductor<br/>
-        <span style="font-size:12px;">© 2026 FrontierX Labs. Apache 2.0 Licensed.</span>
-      </div>
-      <div class="footer-links">
-        <a href="../README.md"  class="footer-link">README</a>
-        <a href="../ROADMAP.md" class="footer-link">Roadmap</a>
-        <a href="../docs/"      class="footer-link">Docs</a>
-        <a href="../LICENSE"    class="footer-link">License</a>
-      </div>
-    </div>
-  </div>
-</footer>
+  </section>
+</main>
 
 <script>
-  // Intersection Observer for scroll animations
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
+const API_BASE = "http://localhost:8001";
+const WS_BASE = "ws://localhost:8001/ws/telemetry";
+
+const QUICK_CMDS = [
+  "Find the generator and inspect it.",
+  "Inspect the generator and pick up the damaged component.",
+];
+
+// ──────────────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────────────
+let ws = null;
+let state = { robots: [], world_objects: [], metrics: {}, e_stop: false, tasks: [] };
+let logs = [];
+let robotTrails = {}; // Store trail history for each robot
+let animationFrame = null;
+let lastTime = 0;
+
+// ──────────────────────────────────────────────────────────────────────
+// Logging
+// ──────────────────────────────────────────────────────────────────────
+function log(msg, level="INFO") {
+  const d = new Date();
+  const ts = d.toTimeString().slice(0, 8);
+  logs.unshift({ ts, level, msg });
+  logs = logs.slice(0, 100);
+  renderLogs();
+}
+function renderLogs() {
+  const el = document.getElementById("logPanel");
+  el.innerHTML = logs.map(l => `<div class="log-line ${l.level}"><span class="ts">${l.ts}</span>[${l.level}] ${l.msg}</div>`).join("");
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// WebSocket
+// ──────────────────────────────────────────────────────────────────────
+function connect() {
+  try { ws = new WebSocket(WS_BASE); } catch(e) { setTimeout(connect, 2000); return; }
+  ws.onopen = () => {
+    document.getElementById("wsDot").classList.remove("danger");
+    document.getElementById("wsStatus").textContent = "LIVE";
+    log("WebSocket telemetry connected.", "INFO");
+  };
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    state.robots = d.robots || [];
+    state.world_objects = d.world_objects || [];
+    state.metrics = d.metrics || {};
+    state.e_stop = !!d.e_stop;
+    state.tasks = d.recent_tasks || [];
+    
+    // Update robot trails
+    for (const r of state.robots) {
+      if (!robotTrails[r.robot_id]) {
+        robotTrails[r.robot_id] = [];
       }
+      const trail = robotTrails[r.robot_id];
+      const currentPos = { x: r.pose?.x || 0, y: r.pose?.y || 0, yaw: r.pose?.yaw || 0 };
+      
+      // Add new position if it's different from the last one
+      if (trail.length === 0 || 
+          Math.abs(trail[trail.length - 1].x - currentPos.x) > 0.1 ||
+          Math.abs(trail[trail.length - 1].y - currentPos.y) > 0.1) {
+        trail.push({ ...currentPos, timestamp: Date.now() });
+        // Keep only last 100 positions
+        if (trail.length > 100) trail.shift();
+      }
+    }
+    
+    renderAll();
+  };
+  ws.onclose = () => {
+    document.getElementById("wsDot").classList.add("danger");
+    document.getElementById("wsStatus").textContent = "Disconnected";
+    log("WebSocket disconnected — retrying.", "WARN");
+    setTimeout(connect, 1500);
+  };
+  ws.onerror = () => { try { ws.close(); } catch(e){} };
+}
+connect();
+
+// ──────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────
+function fetchJSON(path, opts={}) {
+  return fetch(API_BASE + path, opts).then(r => r.json());
+}
+function quickCmd(i) {
+  document.getElementById("cmdInput").value = QUICK_CMDS[i];
+  submitCommand();
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Submit command
+// ──────────────────────────────────────────────────────────────────────
+async function submitCommand() {
+  const cmd = document.getElementById("cmdInput").value.trim();
+  if (!cmd) return;
+  log(`👤 User command: "${cmd}"`);
+  const planEl = document.getElementById("currentPlan");
+  planEl.innerHTML = `<p style="color:var(--warn)">⏳ Planning command…</p>`;
+  try {
+    const res = await fetchJSON("/api/v1/command", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ command: cmd, source: "WEB_DASHBOARD" })
     });
-  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-  document.querySelectorAll('.card, .phase-card, .metric-card, .arch-container, .flow-container').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    observer.observe(el);
-  });
-
-  // ═════════════════════════════════════════════════════════════
-  // CENTRAL BRAIN INTERACTIVE UI JS LOGIC
-  // ═════════════════════════════════════════════════════════════
-  const API_BASE = 'http://localhost:8000';
-
-  function setSampleCmd(text) {
-    document.getElementById('cmd-input').value = text;
-  }
-
-  async function executeBrainCommand() {
-    const inputEl = document.getElementById('cmd-input');
-    const boxEl = document.getElementById('reasoning-box');
-    const cmd = inputEl.value.trim();
-
-    if (!cmd) {
-      boxEl.innerHTML = `<div style="color:var(--amber);">⚠️ Please enter a command first.</div>`;
+    if (!res || res.error) {
+      planEl.innerHTML = `<p style="color:var(--danger)">❌ ${res?.error || "Plan rejected"}</p>`;
+      log("Plan failed: " + (res?.error || "unknown"), "ERROR");
       return;
     }
-
-    boxEl.innerHTML = `
-      <div style="color:var(--cyan);">[1/4] Ingesting command into Central Brain...</div>
-      <div style="color:var(--text-muted); font-size:12px; margin-top:4px;">Command: "${cmd}"</div>
-    `;
-
-    try {
-      const resp = await fetch(`${API_BASE}/api/v1/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd, source: 'WEB_DASHBOARD' })
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({ detail: 'API returned status ' + resp.status }));
-        throw new Error(errData.detail || 'API request failed');
-      }
-      const data = await resp.json();
-      renderExecutionResults(data);
-
-    } catch (err) {
-      boxEl.innerHTML = `
-        <div style="color:var(--red); font-weight:700;">⚠️ Central Brain API Connection Notice:</div>
-        <div style="color:var(--text-secondary); margin-top:4px; font-size:12px;">${err.message}</div>
-        <div style="color:var(--text-muted); margin-top:8px; font-size:11px;">
-          Make sure the Central Brain server is running: <br/>
-          <code style="font-family:var(--font-mono); color:var(--cyan);">python scripts/launch_brain.py --port 8000</code><br/>
-          And ensure an LLM key or Ollama instance is configured.
-        </div>
-      `;
+    log(`🧠 Plan ${res.plan_id ? res.plan_id.slice(0,8) : 'N/A'} generated (${res.steps?.length || 0} steps). ${res.reasoning || ""}`);
+    renderPlan(res);
+    // Render results as they are (plan is already executed synchronously in API)
+    const stepMap = Object.fromEntries((res.execution_results||[]).map(r => [r.step_id, r]));
+    const steps = Array.isArray(res.steps) ? res.steps : [];
+    for (const s of steps) {
+      const r = stepMap[s.step_id];
+      const row = document.querySelector(`[data-step="${s.step_id}"]`);
+      if (!row) continue;
+      row.classList.remove("run");
+      if (!r) continue;
+      row.classList.add(r.success ? "done" : "fail");
+      const tail = row.querySelector(".step-tail") || document.createElement("div");
+      tail.className = "step-tail";
+      tail.style.marginLeft = "auto";
+      tail.style.fontSize = "11px";
+      tail.style.color = r.success ? "#3cf090" : "#ff8d8d";
+      tail.innerHTML = `${r.robot_id || ""} · ${r.success ? "OK" : r.message.slice(0,60)}`;
+      row.appendChild(tail);
     }
+    const allOk = (res.all_steps_successful) || (res.execution_results||[]).every(x => x.success);
+    if (res.inspection_report) {
+      const rep = res.inspection_report;
+      const findings = (rep.findings || []).slice(0, 4).map(f => `• ${f}`).join("<br/>");
+      planEl.insertAdjacentHTML("beforeend",
+        `<div style="margin-top:10px; padding: 10px; background: var(--panel-2); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-size:12px; text-transform:uppercase; color:var(--muted); letter-spacing:1px; margin-bottom:4px;">Final Mission Report — ${rep.status}</div>
+          <div style="font-size:13px;">Target: <b>${rep.target_object || rep.target || "—"}</b> · Robot: <b>${rep.robot_id || rep.assigned_robot || "—"}</b> · Findings: <b>${rep.total_findings || 0}</b></div>
+          ${findings ? `<div style="margin-top:6px; font-size:12px; color:#c7fbdb;">${findings}</div>` : ""}
+        </div>`
+      );
+    }
+    log(`✅ Mission ${allOk ? "COMPLETED" : "HAD FAILURES"}. Status: ${res.inspection_report?.status || "—"}`);
+  } catch (err) {
+    planEl.innerHTML = `<p style="color:var(--danger)">❌ ${String(err)}</p>`;
+    log(String(err), "ERROR");
   }
+}
 
-  function renderExecutionResults(data) {
-    const boxEl = document.getElementById('reasoning-box');
-    let html = `<div style="color:var(--cyan); font-weight:700;">[2/4] LLM Reasoning & Task Plan (ID: ${data.plan_id.substring(0,8)})</div>`;
-    html += `<div style="color:var(--text-secondary); margin:6px 0 12px; font-style:italic;">"${data.reasoning || 'Task planner decomposed command into executable steps.'}"</div>`;
-    
-    html += `<div style="color:var(--green); font-weight:700;">[3/4] Validated Skill Steps Execution DAG:</div>`;
-    data.steps.forEach((step, idx) => {
-      const result = data.execution_results ? data.execution_results[idx] : null;
-      const statusText = result && result.success ? '✅ COMPLETED' : '⚡ EXECUTING';
-      const capTag = step.required_capabilities ? step.required_capabilities.join(', ') : 'standard';
-
-      html += `
-        <div style="background:rgba(255,255,255,0.03); border-left:3px solid var(--cyan); padding:8px 12px; margin:6px 0; border-radius:4px;">
-          <div style="display:flex; justify-content:space-between;">
-            <strong style="color:var(--text-primary);">Step ${step.step_id}: ${step.task_type}</strong>
-            <span style="color:var(--green); font-size:11px;">${statusText}</span>
+function renderPlan(res) {
+  const el = document.getElementById("currentPlan");
+  const steps = Array.isArray(res.steps) ? res.steps : [];
+  const planId = res.plan_id ? res.plan_id.slice(0,12) : 'N/A';
+  
+  if (steps.length === 0) {
+    el.innerHTML = `
+      <div style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Plan ID: ${planId}…</div>
+      <h3 style="margin:2px 0 6px;">${res.reasoning || "Mission plan"}</h3>
+      <p style="color:var(--muted); margin:0;">No steps generated for this plan.</p>
+    `;
+    return;
+  }
+  
+  el.innerHTML = `
+    <div style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Plan ID: ${planId}…</div>
+    <h3 style="margin:2px 0 6px;">${res.reasoning || "Mission plan"}</h3>
+    <div class="steps" id="planSteps">
+      ${steps.map(s => `
+        <div class="step" data-step="${s.step_id}">
+          <div class="idx">${s.step_id}</div>
+          <div style="flex:1;">
+            <div style="font-weight:600;">${s.task_type}</div>
+            <div style="color:var(--muted); font-size:11.5px;">${s.description}</div>
           </div>
-          <div style="font-size:12px; color:var(--text-muted);">${step.description}</div>
-          <div style="font-size:11px; color:var(--purple); margin-top:2px;">Capabilities: [${capTag}]</div>
         </div>
-      `;
-    });
+      `).join("")}
+    </div>
+  `;
+}
 
-    if (data.inspection_report && data.inspection_report.findings_summary) {
-      html += `<div style="color:var(--amber); font-weight:700; margin-top:12px;">[4/4] Final Inspection Findings:</div>`;
-      data.inspection_report.findings_summary.forEach(f => {
-        html += `<div style="color:var(--text-primary); font-size:12px;">• ${f}</div>`;
-      });
-    }
+// ──────────────────────────────────────────────────────────────────────
+// Triggers
+// ──────────────────────────────────────────────────────────────────────
+async function triggerEStop() {
+  log("⚠️  E-STOP triggered by dashboard.", "WARN");
+  await fetchJSON("/api/v1/safety/e_stop?reason=Dashboard+button", { method: "POST" });
+}
+async function clearEStop() {
+  log("ℹ️  E-STOP cleared.");
+  await fetchJSON("/api/v1/safety/clear_e_stop", { method: "POST" });
+}
 
-    boxEl.innerHTML = html;
-  }
-
-  function triggerEstop() {
-    alert('🚨 GLOBAL EMERGENCY STOP BROADCAST ACTIVATED! All robot motions halted.');
-    document.getElementById('reasoning-box').innerHTML = `
-      <div style="color:var(--red); font-weight:700; font-size:14px;">🚨 GLOBAL EMERGENCY STOP ACTIVATED</div>
-      <div style="color:var(--text-secondary); margin-top:4px;">All physical and simulated actuator commands are locked. Hard reset required.</div>
+// ──────────────────────────────────────────────────────────────────────
+// Render functions
+// ──────────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderRobots(); renderWorldObjects(); renderMap(); renderMetrics(); renderTasks();
+  document.getElementById("brainStatus").textContent = state.e_stop ? "E-STOP ACTIVE" : "BRAIN ONLINE";
+  const pill = document.getElementById("eStopPill");
+  pill.classList.toggle("danger", state.e_stop);
+}
+function iconForBody(bodyType) {
+  return {"UGV":"🚗","ARM":"🦾","DRONE":"🛸","QUADRUPED":"🐕","TRACKED":"🚜"}[bodyType] || "🤖";
+}
+function renderRobots() {
+  const el = document.getElementById("robotList");
+  if (!state.robots.length) { el.innerHTML = `<p style="color:var(--muted); font-size:13px; margin:0;">No robots registered.</p>`; return; }
+  el.innerHTML = state.robots.map(r => {
+    const offline = r.status === "OFFLINE" || r.status === "FAULT";
+    const lowBattery = r.battery_percentage < 25;
+    return `
+      <div class="robot-card">
+        <div class="robot-body ${r.body_type} ${offline?"OFFLINE":""}">
+          <div class="body-icon">${iconForBody(r.body_type)}</div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between;"><b>${r.name}</b><span style="color:${offline?'var(--danger)':'var(--accent)'}; font-size:11px; text-transform:uppercase;">${r.status}</span></div>
+            <div style="font-size:11px; color:var(--muted);">${r.robot_id} · ${r.body_type} · ip ${r.ip_address || "—"}</div>
+            <div style="margin-top:5px; display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+              <span>Battery <b style="color:${lowBattery?'var(--warn)':'var(--text)'};">${r.battery_percentage.toFixed(1)}%</b></span>
+              <span>${r.max_linear_velocity} m/s · ${r.max_payload_kg} kg</span>
+            </div>
+            <div class="battery ${lowBattery?'low':''}"><div style="width:${r.battery_percentage}%"></div></div>
+            <div style="margin-top:6px;">${(r.capabilities||[]).map(c => `<span class="tag cap">${c}</span>`).join("")}</div>
+            <div class="row"><span>pose</span><b>(${r.pose?.x?.toFixed(2)}, ${r.pose?.y?.toFixed(2)}) yaw ${(r.pose?.yaw||0).toFixed(2)}</b></div>
+          </div>
+        </div>
+      </div>
     `;
+  }).join("");
+}
+function renderWorldObjects() {
+  const el = document.getElementById("worldObjects");
+  if (!state.world_objects.length) { el.innerHTML = `<p style="color:var(--muted); font-size:13px; margin:0;">No tracked objects.</p>`; return; }
+  el.innerHTML = state.world_objects.slice(0, 8).map(o => `
+    <div class="object-card">
+      <div style="display:flex; justify-content:space-between;"><b>${o.name || o.object_id}</b>
+        <span class="tag" style="background:${o.status==='INSPECTED'?'#122a1b':o.status==='DAMAGED'?'#3a1515':'#1e2b3f'}; color:${o.status==='INSPECTED'?'#a7e6bd':o.status==='DAMAGED'?'#ff9494':'#bcd3ef'};">${o.status}</span>
+      </div>
+      <div class="row"><span>class</span><b>${o.class_name}</b></div>
+      <div class="row"><span>position</span><b>(${o.x?.toFixed(2)}, ${o.y?.toFixed(2)})</b></div>
+      ${o.metadata?.last_inspection_temp_c != null ? `<div class="row"><span>temp</span><b>${o.metadata.last_inspection_temp_c.toFixed(1)} °C</b></div>` : ""}
+      ${o.metadata?.damage_detected ? `<div class="row"><span>damage</span><b style="color:var(--danger)">DETECTED</b></div>` : ""}
+    </div>
+  `).join("");
+}
+function renderTasks() {
+  const el = document.getElementById("taskHistory");
+  if (!state.tasks.length) { el.innerHTML = `<p style="color:var(--muted); font-size:13px; margin:0;">No recent missions.</p>`; return; }
+  el.innerHTML = state.tasks.slice(0, 5).map(t => `
+    <div class="task-card">
+      <div style="display:flex; justify-content:space-between;">
+        <b style="font-size:12px;">${t.command || "—"}</b>
+        <span class="tag" style="background:${t.status==='COMPLETED'?'#122a1b':'#3a1515'}; color:${t.status==='COMPLETED'?'#a7e6bd':'#ff9494'};">${t.status}</span>
+      </div>
+      <div class="row"><span>id</span><b>${t.task_id?.slice(0,10)||"—"}…</b></div>
+    </div>
+  `).join("");
+}
+function renderMetrics() {
+  const m = state.metrics || {};
+  const rows = [
+    ["Robots", state.robots.length, "ok"],
+    ["World Objs", state.world_objects.length, "ok"],
+    ["Tasks", m.tasks_executed || 0, "ok"],
+    ["Safety Blocks", m.safety_violations_blocked || 0, m.safety_violations_blocked ? "warn" : "ok"],
+    ["Planner Fail", m.planner_failures || 0, m.planner_failures ? "err" : "ok"],
+    ["Exec Fail", m.execution_failures || 0, m.execution_failures ? "err" : "ok"],
+  ];
+  document.getElementById("metrics").innerHTML = rows.map(([label, val, cls]) =>
+    `<div class="metric ${cls}"><h4>${label}</h4><p>${val}</p></div>`
+  ).join("");
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// World map canvas with animation
+// ──────────────────────────────────────────────────────────────────────
+function renderMap() {
+  const cvs = document.getElementById("mapCanvas");
+  const ctx = cvs.getContext("2d");
+  const W = cvs.width, H = cvs.height;
+  ctx.clearRect(0,0,W,H);
+  
+  // Background grid
+  ctx.fillStyle = "#0c1219";
+  ctx.fillRect(0,0,W,H);
+  const scale = Math.min(W,H)/40;  // world is 40x40m
+  const off = (x) => (x + 20) * scale;
+  
+  // Draw grid with animation
+  const time = Date.now() / 1000;
+  ctx.strokeStyle = "#152030";
+  ctx.lineWidth = 1;
+  for (let i = -20; i <= 20; i++) {
+    const alpha = 0.3 + 0.2 * Math.sin(time + i * 0.5);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.moveTo(off(i), 0); ctx.lineTo(off(i), H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, off(i)); ctx.lineTo(W, off(i)); ctx.stroke();
   }
+  ctx.globalAlpha = 1.0;
+  
+  // Walls with glow effect
+  ctx.strokeStyle = "#334155"; ctx.lineWidth = 2;
+  ctx.shadowColor = "#26d07c";
+  ctx.shadowBlur = 10;
+  ctx.strokeRect(off(-20), off(-20), 40*scale, 40*scale);
+  ctx.shadowBlur = 0;
+
+  // World objects with pulse animation
+  for (const o of state.world_objects) {
+    let color = "#475569", label = o.class_name;
+    if (o.class_name === "generator")        { color = "#64748b"; label = o.status === "DAMAGED" ? "⚠ GEN" : "GEN"; }
+    if (o.class_name === "damaged_component"){ color = "#c2410c"; label = "DC"; }
+    if (o.class_name === "charging_dock")    { color = "#1d4ed8"; label = "🔌"; }
+    if (o.class_name === "valve")            { color = "#7c3aed"; label = "VAL"; }
+    const px = off(o.x), py = off(o.y);
+    
+    // Pulse effect for damaged/abnormal objects
+    if (o.status === "DAMAGED" || o.status === "ABNORMAL") {
+      const pulse = 1 + 0.2 * Math.sin(time * 3);
+      ctx.strokeStyle = "#f87171"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, 18 * pulse, 0, Math.PI*2); ctx.stroke();
+    }
+    
+    ctx.fillStyle = color;
+    ctx.fillRect(px - 12, py - 12, 24, 24);
+    ctx.strokeStyle = "#94a3b8"; ctx.strokeRect(px - 12, py - 12, 24, 24);
+    ctx.fillStyle = "#fff"; ctx.font = "10px ui-sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(label, px, py + 3);
+  }
+
+  // Robot trails
+  for (const [robotId, trail] of Object.entries(robotTrails)) {
+    if (trail.length < 2) continue;
+    
+    const robot = state.robots.find(r => r.robot_id === robotId);
+    if (!robot) continue;
+    
+    let color = "#22c55e";
+    if (robot.body_type === "ARM") color = "#3b82f6";
+    if (robot.body_type === "DRONE") color = "#a855f7";
+    if (robot.status === "OFFLINE") color = "#64748b";
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    
+    ctx.beginPath();
+    for (let i = 0; i < trail.length; i++) {
+      const px = off(trail[i].x), py = off(trail[i].y);
+      if (i === 0) {
+        ctx.moveTo(px, py);
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+    
+    // Draw trail dots
+    for (let i = 0; i < trail.length; i++) {
+      const px = off(trail[i].x), py = off(trail[i].y);
+      const alpha = (i / trail.length) * 0.8;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Robots with smooth animation
+  for (const r of state.robots) {
+    const px = off(r.pose?.x || 0), py = off(r.pose?.y || 0);
+    let color = "#22c55e";
+    if (r.body_type === "ARM") color = "#3b82f6";
+    if (r.body_type === "DRONE") color = "#a855f7";
+    if (r.status === "OFFLINE") color = "#64748b";
+    
+    // Robot glow
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 15;
+    
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(r.pose?.yaw || 0);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (r.body_type === "ARM") {
+      ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#1e3a8a"; ctx.fillRect(0,-2,22,4);
+    } else {
+      ctx.moveTo(12, 0); ctx.lineTo(-10, 8); ctx.lineTo(-10, -8); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#fff"; ctx.font = "10px ui-sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(r.robot_id.slice(0, 12), px, py + 24);
+    
+    // Status indicator
+    if (r.status === "ACTIVE" || r.status === "MOVING") {
+      ctx.fillStyle = "#26d07c";
+      ctx.beginPath();
+      ctx.arc(px + 15, py - 15, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Animation loop
+function animateMap(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const deltaTime = timestamp - lastTime;
+  
+  renderMap();
+  
+  lastTime = timestamp;
+  animationFrame = requestAnimationFrame(animateMap);
+}
+
+// Start animation when page loads
+window.addEventListener('load', () => {
+  animationFrame = requestAnimationFrame(animateMap);
+});
+
+// Keyboard shortcut: Enter sends command
+document.getElementById("cmdInput").addEventListener("keydown", e => { if (e.key === "Enter") submitCommand(); });
+
+// Bootstrapping: if REST API unreachable, inform user once
+fetch(API_BASE + "/").then(r => r.json()).then(info => {
+  log(`REST API connected. Version ${info.version} · LLM ${info.llm_provider || "?"} · Skills ${info.skill_count || "?"}`);
+}).catch(() => log("Cannot reach REST API at " + API_BASE + ". Start server: `python scripts/launch_brain.py` or `uvicorn frontierx_brain.api.gateway:create_app`", "WARN"));
 </script>
 </body>
 </html>

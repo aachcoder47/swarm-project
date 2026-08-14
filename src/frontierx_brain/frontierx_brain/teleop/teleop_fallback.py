@@ -19,9 +19,13 @@ from frontierx_brain.observability.observability import brain_logger
 
 class TeleopCommand(BaseModel):
     robot_id: str
+    operator: str = ""
+    linear_velocity: float = 0.0
+    angular_velocity: float = 0.0
     linear_x: float = 0.0
     linear_y: float = 0.0
     angular_z: float = 0.0
+    deadman_held: bool = True
     deadman_switch_pressed: bool = True
     timestamp: float = Field(default_factory=time.time)
 
@@ -34,19 +38,16 @@ class TeleoperationFallback:
         self.policy_supervisor = policy_supervisor
         self._active_teleop_robot: Optional[str] = None
         self._last_teleop_time: float = 0.0
-        self._timeout_seconds: float = 0.5  # Deadman switch timeout (500ms)
+        self._timeout_seconds: float = 0.5
 
     def start_teleop_session(self, robot_id: str) -> bool:
-        """Engage manual teleop mode for a specific robot body."""
         robot = self.robot_registry.get_robot(robot_id)
         if not robot:
             brain_logger.error(f"Cannot start teleop: robot {robot_id} not registered.")
             return False
-
         if self.policy_supervisor.is_e_stopped():
-            brain_logger.warning(f"Cannot start teleop: system is E_STOPPED.")
+            brain_logger.warning("Cannot start teleop: system is E_STOPPED.")
             return False
-
         self._active_teleop_robot = robot_id
         self._last_teleop_time = time.time()
         robot.status = RobotStatus.BUSY
@@ -54,7 +55,6 @@ class TeleoperationFallback:
         return True
 
     def stop_teleop_session(self, robot_id: str) -> None:
-        """Disengage manual teleop mode."""
         if self._active_teleop_robot == robot_id:
             self._active_teleop_robot = None
             robot = self.robot_registry.get_robot(robot_id)
@@ -62,33 +62,68 @@ class TeleoperationFallback:
                 robot.status = RobotStatus.IDLE
             brain_logger.info(f"Manual teleoperation DISENGAGED for robot {robot_id}.", robot_id=robot_id)
 
-    def process_teleop_command(self, cmd: TeleopCommand) -> Dict[str, float]:
-        """Validate and clamp teleoperation command."""
+    def process_teleop_command(self, cmd: TeleopCommand) -> TeleopCommand:
+        if self.policy_supervisor.is_e_stopped():
+            raise RuntimeError(
+                "Teleoperation command REJECTED: Global Emergency Stop is ACTIVE. "
+                "Clear E-STOP before re-engaging manual override."
+            )
+        if self._active_teleop_robot is None:
+            self.start_teleop_session(cmd.robot_id)
         if self._active_teleop_robot != cmd.robot_id:
-            brain_logger.warning(f"Teleop cmd rejected: robot {cmd.robot_id} is not currently under active teleop lease.")
-            return {"linear_x": 0.0, "linear_y": 0.0, "angular_z": 0.0}
-
-        if self.policy_supervisor.is_e_stopped() or not cmd.deadman_switch_pressed:
-            brain_logger.warning(f"Teleop cmd zeroed: E-STOP or deadman switch released.")
-            return {"linear_x": 0.0, "linear_y": 0.0, "angular_z": 0.0}
-
+            brain_logger.warning(
+                f"Teleop cmd rejected: robot {cmd.robot_id} is not currently under active teleop lease."
+            )
+            zero = TeleopCommand(
+                robot_id=cmd.robot_id,
+                operator=cmd.operator,
+                linear_velocity=0.0,
+                angular_velocity=0.0,
+                deadman_held=cmd.deadman_held,
+            )
+            return zero
+        deadman_active = cmd.deadman_held or cmd.deadman_switch_pressed
+        if not deadman_active:
+            brain_logger.warning("Teleop cmd zeroed: deadman switch released.")
+            return TeleopCommand(
+                robot_id=cmd.robot_id,
+                operator=cmd.operator,
+                linear_velocity=0.0,
+                angular_velocity=0.0,
+                deadman_held=False,
+            )
         self._last_teleop_time = time.time()
         robot = self.robot_registry.get_robot(cmd.robot_id)
         max_v = robot.max_linear_velocity if robot else 0.5
         max_w = 1.0
-
-        # Safety Clamping
-        safe_x = max(-max_v, min(max_v, cmd.linear_x))
-        safe_y = max(-max_v, min(max_v, cmd.linear_y))
-        safe_z = max(-max_w, min(max_w, cmd.angular_z))
-
-        return {"linear_x": safe_x, "linear_y": safe_y, "angular_z": safe_z}
+        linear = cmd.linear_velocity
+        if linear == 0.0 and cmd.linear_x != 0.0:
+            linear = cmd.linear_x
+        angular = cmd.angular_velocity
+        if angular == 0.0 and cmd.angular_z != 0.0:
+            angular = cmd.angular_z
+        safe_linear = max(-max_v, min(max_v, float(linear)))
+        safe_angular = max(-max_w, min(max_w, float(angular)))
+        result = TeleopCommand(
+            robot_id=cmd.robot_id,
+            operator=cmd.operator,
+            linear_velocity=safe_linear,
+            angular_velocity=safe_angular,
+            linear_x=safe_linear,
+            linear_y=0.0,
+            angular_z=safe_angular,
+            deadman_held=cmd.deadman_held,
+            deadman_switch_pressed=cmd.deadman_switch_pressed,
+        )
+        return result
 
     def check_deadman_timeout(self) -> bool:
-        """Watchdog checking if active teleop lost control heartbeats."""
         if self._active_teleop_robot and (time.time() - self._last_teleop_time > self._timeout_seconds):
             r_id = self._active_teleop_robot
             self.stop_teleop_session(r_id)
-            brain_logger.warning(f"Teleop deadman timeout reached for robot {r_id}. Velocity reset to zero.", robot_id=r_id)
+            brain_logger.warning(
+                f"Teleop deadman timeout reached for robot {r_id}. Velocity reset to zero.",
+                robot_id=r_id,
+            )
             return True
         return False

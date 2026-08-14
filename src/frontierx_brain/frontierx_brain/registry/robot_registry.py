@@ -8,37 +8,20 @@ and operational leases for heterogeneous physical and simulated robot bodies.
 from __future__ import annotations
 
 import time
-from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
-
-class RobotBodyType(str, Enum):
-    UGV = "UGV"            # Wheeled Ground Vehicle
-    TRACKED = "TRACKED"    # Tracked All-Terrain Ground Vehicle
-    ARM = "ARM"            # Robotic Arm Manipulator
-    QUADRUPED = "QUADRUPED"# 4-Legged Walker
-    DRONE = "DRONE"        # Aerial UAV
-    CUSTOM = "CUSTOM"      # Custom Body
+from frontierx_brain.core.schemas import (
+    RobotBodyType,
+    RobotStatus,
+    Pose,
+    Capability,
+)
 
 
-class RobotStatus(str, Enum):
-    IDLE = "IDLE"
-    BUSY = "BUSY"
-    CHARGING = "CHARGING"
-    FAULT = "FAULT"
-    E_STOPPED = "E_STOPPED"
-    OFFLINE = "OFFLINE"
-
-
-class RobotPose(BaseModel):
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
-    roll: float = 0.0
-    pitch: float = 0.0
-    yaw: float = 0.0
-    frame_id: str = "map"
+class RobotPose(Pose):
+    """Backwards-compatible alias for Pose."""
+    pass
 
 
 class RobotBodySpec(BaseModel):

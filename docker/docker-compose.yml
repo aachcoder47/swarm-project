@@ -79,10 +79,19 @@ services:
     depends_on:
       ros2-build:
         condition: service_completed_successfully
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
+      - ./scripts:/opt/frontierx/scripts:ro
     command: >
       bash -c "
         source /opt/ros/humble/setup.bash &&
         source /opt/ros_ws/install/setup.bash &&
+        (
+          sleep 8 &&
+          /opt/frontierx/scripts/tf_static_republish.py 2>&1 | head -40 &
+        ) &&
         ros2 launch frontierx_bringup core.launch.py
       "
 
@@ -221,11 +230,21 @@ services:
         condition: service_completed_successfully
       ros2-core:
         condition: service_started
+    volumes:
+      - ../src:/opt/ros_ws/src:ro
+      - ../config:/opt/frontierx/config:ro
+      - ros2_workspace:/opt/ros_ws/install
     command: >
       bash -c "
         source /opt/ros/humble/setup.bash &&
         source /opt/ros_ws/install/setup.bash &&
-        ros2 run foxglove_bridge foxglove_bridge --ros-args -p port:=8765 -p address:=0.0.0.0
+        sleep 3 &&
+        ros2 run foxglove_bridge foxglove_bridge --ros-args
+          -p port:=8765
+          -p address:=0.0.0.0
+          -p use_sim_time:=false
+          -p num_threads:=2
+          -p max_qos_depth:=100
       "
     restart: unless-stopped
 

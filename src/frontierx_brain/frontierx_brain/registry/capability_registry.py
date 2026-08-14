@@ -86,3 +86,46 @@ class CapabilityRegistry:
 
         valid_candidates.sort(key=score_candidate, reverse=True)
         return valid_candidates[0]
+
+    def find_capable_bodies(
+        self,
+        required_capabilities: List[str],
+        preferred_body_type: Optional[RobotBodyType] = None,
+        target_x: Optional[float] = None,
+        target_y: Optional[float] = None,
+        min_battery: float = 15.0,
+    ) -> List[RobotBodySpec]:
+        """
+        Matchmaker: returns a sorted list of all robot bodies that possess
+        ALL required capabilities, ranked by scoring (battery, proximity,
+        body-type preference, status).
+        """
+        candidates = self.robot_registry.list_robots()
+        valid_candidates: List[RobotBodySpec] = []
+
+        for robot in candidates:
+            if robot.status not in (RobotStatus.IDLE, RobotStatus.BUSY):
+                continue
+            if robot.battery_percentage < min_battery:
+                continue
+            has_all_caps = all(cap in robot.capabilities for cap in required_capabilities)
+            if not has_all_caps:
+                continue
+            valid_candidates.append(robot)
+
+        def score_candidate(robot: RobotBodySpec) -> float:
+            score = 100.0
+            if preferred_body_type and robot.body_type == preferred_body_type:
+                score += 50.0
+            score += robot.battery_percentage * 0.5
+            if target_x is not None and target_y is not None:
+                dx = robot.pose.x - target_x
+                dy = robot.pose.y - target_y
+                dist = math.sqrt(dx * dx + dy * dy)
+                score -= dist * 2.0
+            if robot.status == RobotStatus.IDLE:
+                score += 30.0
+            return score
+
+        valid_candidates.sort(key=score_candidate, reverse=True)
+        return valid_candidates

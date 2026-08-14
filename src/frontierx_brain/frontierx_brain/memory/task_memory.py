@@ -85,6 +85,7 @@ class TaskMemory:
             "task_id": task_id,
             "original_command": record.user_command,
             "assigned_robot_body": record.selected_robot_id,
+            "status": record.status,
             "execution_status": record.status,
             "duration_seconds": round(duration, 2),
             "findings_summary": record.findings if record.findings else ["Inspection completed normally. No critical anomalies detected."],

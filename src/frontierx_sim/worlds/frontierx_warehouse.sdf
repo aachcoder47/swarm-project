@@ -299,5 +299,122 @@
       </link>
     </model>
 
+    <!-- ── DEMO FACTORY: Workbench + Pedestal for Robotic Arm ────── -->
+    <model name="workbench">
+      <static>true</static>
+      <pose>-2 -5 0.45 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.8 0.8 0.9</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.8 0.8 0.9</size></box></geometry>
+          <material><ambient>0.4 0.3 0.2 1</ambient><diffuse>0.55 0.42 0.28 1</diffuse><specular>0.05 0.04 0.02 1</specular></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="arm_pedestal">
+      <static>true</static>
+      <pose>-2 -6 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.28</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.28</radius><length>1.0</length></cylinder></geometry>
+          <material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.2 0.2 0.22 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── DEMO FACTORY: Main Generator #1 (normal) ──────────── -->
+    <model name="gen_01">
+      <static>true</static>
+      <pose>10 2 0.8 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2.4 1.2 1.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2.4 1.2 1.6</size></box></geometry>
+          <material><ambient>0.75 0.75 0.78 1</ambient><diffuse>0.85 0.85 0.88 1</diffuse></material>
+        </visual>
+      </link>
+      <!-- Control panel on front -->
+      <link name="panel">
+        <pose relative_to="link">0 0.61 0.2 0 0 0</pose>
+        <collision name="c">
+          <geometry><box><size>0.3 0.02 0.5</size></box></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><box><size>0.3 0.02 0.5</size></box></geometry>
+          <material><ambient>0.15 0.5 0.15 1</ambient><diffuse>0.2 0.7 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── DEMO FACTORY: Backup Generator #2 (overheating + damaged) ── -->
+    <model name="gen_02">
+      <static>true</static>
+      <pose>10 -2 0.8 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2.2 1.1 1.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2.2 1.1 1.5</size></box></geometry>
+          <!-- Slight yellow tint + rust tones to indicate aged/damaged -->
+          <material><ambient>0.65 0.6 0.45 1</ambient><diffuse>0.75 0.68 0.55 1</diffuse></material>
+        </visual>
+      </link>
+      <link name="panel">
+        <pose relative_to="link">0 0.56 0.15 0 0 0</pose>
+        <visual name="v">
+          <geometry><box><size>0.28 0.02 0.45</size></box></geometry>
+          <!-- Red control panel to suggest overheating fault -->
+          <material><ambient>0.5 0.12 0.12 1</ambient><diffuse>0.8 0.2 0.2 1</diffuse><emissive>0.3 0.05 0.05 1</emissive></material>
+        </visual>
+      </link>
+      <!-- Visible side crack (dark thin box indented) -->
+      <link name="crack">
+        <pose relative_to="link">0.9 -0.15 0.5 0 0.2 0</pose>
+        <visual name="v">
+          <geometry><box><size>0.01 0.4 0.6</size></box></geometry>
+          <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── DEMO FACTORY: Damaged Component on Workbench ──────── -->
+    <model name="comp_damaged_01">
+      <static>false</static>
+      <pose>-2 -4.5 0.92 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.18</radius><length>0.55</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.18</radius><length>0.55</length></cylinder></geometry>
+          <material><ambient>0.4 0.18 0.08 1</ambient><diffuse>0.55 0.22 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Charging Dock ─────────────────────────────────────── -->
+    <model name="dock_01">
+      <static>true</static>
+      <pose>-10 0 0.05 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.2 0.9 0.1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.2 0.9 0.1</size></box></geometry>
+          <material><ambient>0.1 0.35 0.6 1</ambient><diffuse>0.2 0.5 0.85 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
   </world>
 </sdf>
