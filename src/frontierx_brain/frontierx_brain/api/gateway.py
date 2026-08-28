@@ -18,8 +18,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, BackgroundTasks
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, BackgroundTasks, Depends
     from fastapi.middleware.cors import CORSMiddleware
+    from frontierx_brain.api.auth import get_current_user, check_rate_limit
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -289,8 +290,8 @@ def create_app() -> Any:
             "skill_count": len(brain.skill_registry.all_skill_ids()),
         }
 
-    @app.post("/api/v1/command")
-    def submit_command(req: CommandRequest):
+    @app.post("/api/v1/command", dependencies=[Depends(check_rate_limit)])
+    def submit_command(req: CommandRequest, user: dict = Depends(get_current_user)):
         # command_interface is NEVER None (see CentralBrainSystem init invariant)
         session, plan = brain.command_interface.process_command(req.command, source=req.source)
         if not plan:
@@ -327,8 +328,8 @@ def create_app() -> Any:
             "inspection_report": report,
         }
 
-    @app.post("/api/v1/robots/register")
-    def register_robot(robot_spec: RobotBodySpec):
+    @app.post("/api/v1/robots/register", dependencies=[Depends(check_rate_limit)])
+    def register_robot(robot_spec: RobotBodySpec, user: dict = Depends(get_current_user)):
         reg = brain.robot_registry.register_robot(robot_spec)
         return reg.model_dump()
 
@@ -369,13 +370,16 @@ def create_app() -> Any:
     def get_task_report(task_id: str):
         return brain.task_memory.generate_inspection_report(task_id)
 
-    @app.post("/api/v1/safety/e_stop")
-    def trigger_e_stop(reason: str = Query("Emergency Stop Button pressed from Web UI")):
+    @app.post("/api/v1/safety/e_stop", dependencies=[Depends(check_rate_limit)])
+    def trigger_e_stop(
+        reason: str = Query("Emergency Stop Button pressed from Web UI"),
+        user: dict = Depends(get_current_user),
+    ):
         brain.policy_supervisor.trigger_global_e_stop(reason)
         return {"status": "E_STOP_ACTIVATED", "reason": reason}
 
-    @app.post("/api/v1/safety/clear_e_stop")
-    def clear_e_stop():
+    @app.post("/api/v1/safety/clear_e_stop", dependencies=[Depends(check_rate_limit)])
+    def clear_e_stop(user: dict = Depends(get_current_user)):
         brain.policy_supervisor.clear_e_stop()
         return {"status": "E_STOP_CLEARED"}
 
@@ -387,8 +391,8 @@ def create_app() -> Any:
     def get_logs(limit: int = Query(50)):
         return brain_logger.get_recent_logs(limit)
 
-    @app.post("/api/v1/teleop/command")
-    def teleop_command(cmd: TeleopCommand):
+    @app.post("/api/v1/teleop/command", dependencies=[Depends(check_rate_limit)])
+    def teleop_command(cmd: TeleopCommand, user: dict = Depends(get_current_user)):
         safe_cmd = brain.teleop.process_teleop_command(cmd)
         return {"robot_id": cmd.robot_id, "command_sent": safe_cmd}
 

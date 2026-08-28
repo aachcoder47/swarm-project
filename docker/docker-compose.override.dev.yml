@@ -1,0 +1,49 @@
+# FrontierX Compose Overlay — Local Development Configuration
+# ==========================================================
+# Run with: docker compose -f docker-compose.yml -f docker-compose.override.dev.yml up
+
+services:
+  ros2-core:
+    # Developer convenience: expose FastDDS / ROS 2 communications to local host
+    ports:
+      - "8765:8765"   # Foxglove WebSocket Bridge
+      - "9090:9090"   # Prometheus metrics exporter
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  navigation:
+    # Mount live configs so developer can edit Nav2/SLAM parameters without rebuilding container
+    volumes:
+      - ../src:/opt/ros_ws/src
+      - ../config:/opt/frontierx/config
+      - ../volumes/maps:/opt/frontierx/maps
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  perception:
+    # Mount model weights and code directories for direct testing
+    volumes:
+      - ../src:/opt/ros_ws/src
+      - ../config:/opt/frontierx/config
+      - ../volumes/models:/opt/frontierx/models
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  world-model:
+    volumes:
+      - ../src:/opt/ros_ws/src
+      - ../config:/opt/frontierx/config
+      - ../volumes/world_model:/opt/frontierx/world_model
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  agent:
+    volumes:
+      - ../src:/opt/ros_ws/src
+      - ../config:/opt/frontierx/config
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  safety-monitor:
+    environment:
+      - LOG_LEVEL=DEBUG

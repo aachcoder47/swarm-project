@@ -1,0 +1,31 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    project: frontierx
+    env:     local
+
+# ── Alerting rules ────────────────────────────────────────────
+rule_files:
+  - "alerts/*.yml"
+
+# ── Scrape targets ────────────────────────────────────────────
+scrape_configs:
+  # Brain API metrics
+  - job_name: frontierx_brain
+    static_configs:
+      - targets: ['ros2-core:9090']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Safety monitor
+  - job_name: frontierx_safety
+    static_configs:
+      - targets: ['ros2-core:9091']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

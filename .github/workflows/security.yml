@@ -1,0 +1,144 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run at 02:00 UTC every Monday — catches newly disclosed CVEs
+    - cron: '0 2 * * 1'
+
+jobs:
+  # ── Python SAST (Bandit) ──────────────────────────────────────
+  bandit:
+    name: Python SAST (Bandit)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Bandit
+        run: pip install bandit[toml]
+
+      - name: Run Bandit SAST scan
+        run: |
+          bandit -r src/ \
+            -ll \
+            -f json \
+            -o bandit-report.json || true
+          bandit -r src/ -ll  # also print to stdout
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  # ── Dependency CVE Audit (pip-audit) ─────────────────────────
+  pip-audit:
+    name: Dependency CVE Audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Python dependencies
+        run: |
+          pip-audit \
+            -r docker/requirements.txt \
+            --format json \
+            --output pip-audit-report.json || true
+          pip-audit -r docker/requirements.txt  # print to stdout
+
+      - name: Upload pip-audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+
+  # ── Secret Scanning (Trufflehog) ─────────────────────────────
+  trufflehog:
+    name: Secret Scanning (Trufflehog)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for git log scanning
+
+      - name: Trufflehog OSS secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # ── Docker Image Vulnerability Scan (Trivy) ──────────────────
+  trivy:
+    name: Docker Image Scan (Trivy)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image for scanning
+        run: |
+          docker build \
+            -f docker/Dockerfile.ros2 \
+            -t frontierx/ros2-humble:scan \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg VERSION=scan \
+            .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontierx/ros2-humble:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'   # Don't block yet — upload results first
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Fail on CRITICAL CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontierx/ros2-humble:scan'
+          format: 'table'
+          severity: 'CRITICAL'
+          exit-code: '1'   # Block merge on CRITICAL vulnerabilities
+
+  # ── Summary ──────────────────────────────────────────────────
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-22.04
+    needs: [bandit, pip-audit, trufflehog, trivy]
+    if: always()
+    steps:
+      - name: Write summary
+        run: |
+          echo "## FrontierX Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Scanner | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bandit SAST | ${{ needs.bandit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| pip-audit CVE | ${{ needs.pip-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trufflehog Secrets | ${{ needs.trufflehog.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Image Scan | ${{ needs.trivy.result }} |" >> $GITHUB_STEP_SUMMARY

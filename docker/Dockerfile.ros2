@@ -12,6 +12,18 @@ FROM osrf/ros:humble-desktop-full
 # ── Build arguments ──────────────────────────────────────────
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ROS_DISTRO=humble
+ARG BUILD_DATE
+ARG VERSION=1.0.0
+ARG REVISION
+
+# ── OCI Image Labels (traceability) ─────────────────────────
+LABEL org.opencontainers.image.title="FrontierX ROS 2 Humble"
+LABEL org.opencontainers.image.description="ROS 2 Humble + Nav2 + AI robotics platform"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${REVISION}"
+LABEL org.opencontainers.image.source="https://github.com/frontierx-labs/frontierx-robotics"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # ── System dependencies ──────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -97,19 +109,34 @@ RUN mkdir -p \
     /opt/frontierx/config \
     /opt/frontierx/logs
 
+# ── Non-root user (security hardening) ───────────────────────
+# Running as root in containers is a security anti-pattern.
+# UID/GID 1000 matches the default Linux desktop user, avoiding
+# bind-mount permission issues on most developer machines.
+RUN groupadd --gid 1000 frontierx \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash \
+       --create-home frontierx \
+    && chown -R frontierx:frontierx \
+       /opt/ros_ws \
+       /opt/frontierx
+
 # ── ROS 2 environment ────────────────────────────────────────
 ENV PATH="/opt/ros/humble/bin:${PATH}"
 ENV PYTHONPATH="/opt/ros/humble/lib/python3.10/site-packages:${PYTHONPATH}"
 ENV LD_LIBRARY_PATH="/opt/ros/humble/lib:${LD_LIBRARY_PATH}"
 ENV AMENT_PREFIX_PATH="/opt/ros/humble"
 
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /root/.bashrc
-RUN echo "source /opt/ros_ws/install/setup.bash 2>/dev/null || true" >> /root/.bashrc
-RUN echo "export ROS_DOMAIN_ID=42" >> /root/.bashrc
-RUN echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> /root/.bashrc
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /home/frontierx/.bashrc \
+    && echo "source /opt/ros_ws/install/setup.bash 2>/dev/null || true" >> /home/frontierx/.bashrc \
+    && echo "export ROS_DOMAIN_ID=42" >> /home/frontierx/.bashrc \
+    && echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> /home/frontierx/.bashrc
 
 # ── Entrypoint ───────────────────────────────────────────────
 COPY docker/ros2_entrypoint.sh /ros2_entrypoint.sh
 RUN chmod +x /ros2_entrypoint.sh
+
+# Drop root — all subsequent layers and the final container run as frontierx
+USER frontierx
+
 ENTRYPOINT ["/ros2_entrypoint.sh"]
 CMD ["bash"]

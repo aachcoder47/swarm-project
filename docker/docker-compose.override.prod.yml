@@ -1,0 +1,92 @@
+# FrontierX Compose Overlay — Production Hardened Configuration
+# =============================================================
+# Run with: docker compose -f docker-compose.yml -f docker-compose.override.prod.yml up -d
+
+services:
+  ros2-core:
+    # Use immutable built image instead of building locally
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ros2
+    # In production, do not mount live folders. Everything is inside the image.
+    volumes:
+      - ros2_workspace:/opt/ros_ws/install
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    # Drop privileges and secure
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  navigation:
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    volumes:
+      - ros2_workspace:/opt/ros_ws/install
+      - maps_data:/opt/frontierx/maps:ro  # Read-only maps in production
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  perception:
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    volumes:
+      - ros2_workspace:/opt/ros_ws/install
+      - model_weights:/opt/frontierx/models:ro  # Read-only model weights
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  world-model:
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    volumes:
+      - ros2_workspace:/opt/ros_ws/install
+      - world_model_data:/opt/frontierx/world_model  # Persistent state db
+    read_only: false  # Must write world model database
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  agent:
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    volumes:
+      - ros2_workspace:/opt/ros_ws/install
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    secrets:
+      - openai_api_key
+      - anthropic_api_key
+
+  safety-monitor:
+    image: ghcr.io/frontierx-labs/ros2-humble:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+secrets:
+  openai_api_key:
+    file: .secrets/openai_api_key
+  anthropic_api_key:
+    file: .secrets/anthropic_api_key

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: frontierx
+description: A Helm chart for deploying the cloud-side components of the FrontierX Central AI Brain platform.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

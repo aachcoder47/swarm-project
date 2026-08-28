@@ -33,6 +33,10 @@ x-ros2-base: &ros2-base
   build:
     context: ..
     dockerfile: docker/Dockerfile.ros2
+    args:
+      BUILD_DATE: ${BUILD_DATE:-unknown}
+      VERSION: ${VERSION:-dev}
+      REVISION: ${REVISION:-unknown}
   environment:
     - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
     - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
@@ -42,6 +46,23 @@ x-ros2-base: &ros2-base
     - ../src:/opt/ros_ws/src:ro
     - ../config:/opt/frontierx/config:ro
     - ros2_workspace:/opt/ros_ws/install
+  # ── Security hardening (applied to every service) ──────────
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add:
+    - SYS_PTRACE   # needed for ROS 2 backtrace on crash
+  # ── Resource limits ────────────────────────────────────────
+  mem_limit: 2g
+  memswap_limit: 2g
+  cpus: "2.0"
+  # ── Structured log rotation ────────────────────────────────
+  logging:
+    driver: json-file
+    options:
+      max-size: "100m"
+      max-file: "5"
   restart: unless-stopped
 
 # ── Reusable wait-for-build snippet ──────────────────────────
@@ -79,6 +100,12 @@ services:
     depends_on:
       ros2-build:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "bash", "-c", "source /opt/ros/humble/setup.bash && ros2 topic list | grep -q /tf"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - ../src:/opt/ros_ws/src:ro
       - ../config:/opt/frontierx/config:ro
@@ -201,6 +228,59 @@ services:
       - OLLAMA_KEEP_ALIVE=24h
     command: serve
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── Monitoring stack (start with: docker compose --profile monitoring up) ──
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: frontierx_prometheus
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: frontierx_grafana
+    profiles: ["monitoring"]
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-frontierx}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # ── Safety Monitor ───────────────────────────────────────────
   safety-monitor:

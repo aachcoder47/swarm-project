@@ -22,7 +22,7 @@ jobs:
 
       - name: Install lint tools
         run: |
-          pip3 install flake8 black isort
+          pip3 install flake8 black isort mypy pydantic types-PyYAML
           apt-get update -q && apt-get install -y \
             ros-humble-ament-flake8 \
             ros-humble-ament-pep8 \
@@ -36,6 +36,9 @@ jobs:
 
       - name: Python lint (flake8)
         run: flake8 src/ --max-line-length=100 --exclude=__pycache__
+
+      - name: Static type checking (mypy)
+        run: mypy src/ --config-file=pyproject.toml
 
   # ── Build ────────────────────────────────────────────────────
   build:
@@ -160,7 +163,7 @@ jobs:
             ros-humble-slam-toolbox \
             ros-humble-robot-localization \
             python3-pip
-          pip3 install pytest pytest-cov pydantic jsonschema numpy
+          pip3 install pytest pytest-cov pytest-xdist pydantic jsonschema numpy
 
       - name: Build workspace
         run: |
@@ -172,8 +175,11 @@ jobs:
         run: |
           source /opt/ros/humble/setup.bash
           source install/setup.bash
+          # Run standard colcon tests
           colcon test --event-handlers console_cohesion+
           colcon test-result --verbose
+          # Run pytest with parallel execution and coverage enforcement (defined in pyproject.toml)
+          pytest tests/ -n auto
         shell: bash
 
       - name: Publish test results

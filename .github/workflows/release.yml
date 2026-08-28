@@ -1,0 +1,149 @@
+name: Release & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'   # Trigger on semantic version tags: v1.0.0, v2.3.1, etc.
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: frontierx-labs/ros2-humble
+
+jobs:
+  # ── Validate release tag format ───────────────────────────────
+  validate:
+    name: Validate Tag
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Parse semantic version
+        id: parse
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' does not match vMAJOR.MINOR.PATCH format"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "Release version: ${TAG#v}"
+
+  # ── Build & publish multi-platform Docker image ───────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-22.04
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # Needed for cosign OIDC signing
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push multi-platform image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.ros2
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VERSION=${{ needs.validate.outputs.version }}
+            REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true   # Generate SBOM for supply chain security
+
+  # ── Sign image with cosign (SLSA supply chain security) ──────
+  sign:
+    name: Sign Docker Image (cosign)
+    runs-on: ubuntu-22.04
+    needs: build-and-push
+    permissions:
+      packages: write
+      id-token: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign image with cosign (keyless OIDC)
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.digest }}
+
+  # ── Create GitHub Release ─────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-22.04
+    needs: [validate, build-and-push, sign]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          # Extract section between version headers from CHANGELOG.md
+          NOTES=$(awk "/^## \[$VERSION\]/,/^## \[/" CHANGELOG.md | head -n -1 || echo "See CHANGELOG.md")
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "FrontierX ${{ github.ref_name }}"
+          body: |
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
+            **Docker Image:**
+            ```bash
+            docker pull ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}
+            # Verify signature:
+            cosign verify ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.version }}
+            ```
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

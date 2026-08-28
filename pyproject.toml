@@ -1,0 +1,138 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+# ── Project metadata ───────────────────────────────────────────
+[project]
+name = "frontierx-robotics"
+version = "1.0.0"
+description = "FrontierX Central AI Multi-Body Robotics Platform"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+
+# ── Ruff (linter + formatter) ──────────────────────────────────
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations (type hints)
+]
+ignore = [
+    "ANN101",  # Missing type annotation for self
+    "ANN102",  # Missing type annotation for cls
+    "S101",    # Use of assert (common in tests)
+    "S603",    # subprocess without shell=True is fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN", "N802"]
+"src/**/sim/**" = ["ANN"]
+
+# ── Black (formatter) ─────────────────────────────────────────
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | install
+  | log
+  | __pycache__
+)/
+'''
+
+# ── isort (import sorting) ────────────────────────────────────
+[tool.isort]
+profile = "black"
+line_length = 100
+src_paths = ["src", "tests"]
+known_first_party = ["frontierx_brain"]
+
+# ── mypy (static type checking) ──────────────────────────────
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+
+# Ignore third-party stubs that don't ship type info
+[[tool.mypy.overrides]]
+module = [
+    "rclpy.*",
+    "launch.*",
+    "launch_ros.*",
+    "ament_index_python.*",
+    "xacro.*",
+    "tf2_ros.*",
+    "visualization_msgs.*",
+    "nav_msgs.*",
+    "geometry_msgs.*",
+    "sensor_msgs.*",
+    "std_msgs.*",
+    "frontierx_interfaces.*",
+    "ultralytics.*",
+    "cv2.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
+
+# ── pytest ───────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--cov=src/frontierx_brain",
+    "--cov-report=term-missing",
+    "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=65",
+]
+markers = [
+    "unit: fast, isolated unit tests",
+    "integration: end-to-end tests requiring full brain system",
+    "benchmark: performance benchmark tests",
+    "slow: tests that take > 5s",
+]
+
+# ── coverage ─────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["src/frontierx_brain"]
+omit = [
+    "*/tests/*",
+    "*/sim/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "pass",
+]
